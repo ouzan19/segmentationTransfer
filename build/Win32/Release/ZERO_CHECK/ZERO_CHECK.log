@@ -1,0 +1,10 @@
+﻿Build started 21.07.2016 22:56:44.
+     1>Project "C:\Users\ouzan\Documents\Visual Studio 2013\Projects\SegTrans\build\ZERO_CHECK.vcxproj" on node 2 (Rebuild target(s)).
+     1>CustomBuild:
+         Checking Build System
+         CMake does not need to re-run because C:/Users/ouzan/Documents/Visual Studio 2013/Projects/SegTrans/build/CMakeFiles/generate.stamp is up-to-date.
+     1>Done Building Project "C:\Users\ouzan\Documents\Visual Studio 2013\Projects\SegTrans\build\ZERO_CHECK.vcxproj" (Rebuild target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:00.30

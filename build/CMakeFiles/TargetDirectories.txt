@@ -1,0 +1,3 @@
+C:/Users/ouzan/Documents/Visual Studio 2013/Projects/SegTrans/build/CMakeFiles/SegTrans.dir
+C:/Users/ouzan/Documents/Visual Studio 2013/Projects/SegTrans/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/ouzan/Documents/Visual Studio 2013/Projects/SegTrans/build/CMakeFiles/ZERO_CHECK.dir

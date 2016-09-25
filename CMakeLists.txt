@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 2.6)
+project(SegTrans)
+set(VTK_DIR "C:/Libraries/VTK/build")
+find_package(VTK REQUIRED)
+include(${VTK_USE_FILE})
+add_executable(SegTrans SegTrans.cxx)
+target_link_libraries(SegTrans ${VTK_LIBRARIES})
