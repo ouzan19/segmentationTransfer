@@ -677,7 +677,7 @@ void alignDatabase(){
 	
 	float tt = 0;
 
-	for (int face = 2; face <= 20; face++){
+	for (int face = faceNo; face <= faceNo; face++){
 		
 		averageFaceTemp = new Mesh();
 		if (!pointCloudMode)
@@ -735,7 +735,7 @@ void alignDatabase(){
 		PCAAlignment(averageFaceTemp, mesh);
 		//mesh->write((char*)path4.c_str(), !pointCloudMode);
 
-	
+		
 
 		initialFineRigidAlignment(averageFaceTemp, mesh);
 	
@@ -744,7 +744,7 @@ void alignDatabase(){
 		mesh->initialize();
 		mesh->deform(averageFaceTemp, 100000, 10);
 		//mesh->write((char*)path3.c_str(), !pointCloudMode);
-
+		
 
 		ofstream ff;
 		ff.open(path2);
@@ -793,11 +793,12 @@ void alignDatabase(){
 
 
 	std::cout << tt/19 <<std::endl ;
+	
 
 	//averageFace->write("averageFaceInc.off");
 }
 
-
+bool isFirst = true;
 // Define interaction style
 class HighlightInteractorStyle : public vtkInteractorStyleRubberBandPick
 {
@@ -1087,7 +1088,7 @@ public:
 			vtkPoints *points = currPolyData->GetPoints();
 			segments.clear();
 			ifstream f;
-			f.open("segmentation_" + name + "_" + to_string(faceNo) + ".txt");
+			f.open("segmentation_" + name + "_" + to_string(1) + ".txt");
 			int segSize;
 			f >> segSize;
 			
@@ -1210,13 +1211,16 @@ public:
 		if (key == "d"){
 			
 			
-			
-			
+			if (!isFirst){
+				renderer->RemoveActor(renderer->GetActors()->GetLastActor());
+				renderer->RemoveActor(renderer->GetActors()->GetLastActor());
+			}
+			isFirst = false;
 			string path;
 			if (!pointCloudMode)
-				path= "faces\\face" + std::to_string(faceNo+1) + ".off";
+				path= "faces\\face" + std::to_string(faceNo) + ".off";
 			else
-				path = "faces\\face" + std::to_string(faceNo+1) + ".xyz";
+				path = "faces\\face" + std::to_string(faceNo) + ".xyz";
 
 			Mesh *currentFace = new Mesh();
 
@@ -1233,8 +1237,8 @@ public:
 			//numOfSegs = initialFace->smoothAllNormals(10000);
 			//currentFace->angleXY();
 
-			int x = 200*((faceNo) % 5) ;
-			int y = -900*((faceNo)/ 5);
+			int x = 200*((1) % 5) ;
+			int y = -900*((1)/ 5);
 
 			currentFace->shiftMesh(x,y-300);
 
@@ -1249,8 +1253,8 @@ public:
 			int nVerts = face->GetPoints()->GetNumberOfPoints();
 			vtkDataArray * s = face->GetPointData()->GetScalars();
 
-			ifstream ff("faces\\corr"+to_string(faceNo+1)+".txt");
-			ofstream fff("segmentation_" + name + "_" + to_string(faceNo+1) + ".txt");
+			ifstream ff("faces\\corr"+to_string(faceNo)+".txt");
+			ofstream fff("segmentation_" + name + "_" + to_string(faceNo) + ".txt");
 			int temp = segments.size();
 			fff << "13" << std::endl;
 			for (int i = 0; i < currentFace->verts.size(); i++){
@@ -1925,9 +1929,11 @@ int main()
 
 
 
-	std::cout << "give user name" << std::endl;
-	std::cin >> name;
-
+	//std::cout << "give user name" << std::endl;
+	//std::cin >> name;
+	std::cin >> faceNo;
+	
+	name = "initial";
 	initialFace = new Mesh();
 
 	if (!pointCloudMode)
