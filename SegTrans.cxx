@@ -1211,11 +1211,11 @@ public:
 		if (key == "d"){
 			
 			
-			if (!isFirst){
-				renderer->RemoveActor(renderer->GetActors()->GetLastActor());
-				renderer->RemoveActor(renderer->GetActors()->GetLastActor());
-			}
-			isFirst = false;
+			//if (!isFirst){
+				//renderer->RemoveActor(renderer->GetActors()->GetLastActor());
+				//renderer->RemoveActor(renderer->GetActors()->GetLastActor());
+			//}
+			//isFirst = false;
 			string path;
 			if (!pointCloudMode)
 				path= "faces\\face" + std::to_string(faceNo) + ".off";
@@ -1237,10 +1237,10 @@ public:
 			//numOfSegs = initialFace->smoothAllNormals(10000);
 			//currentFace->angleXY();
 
-			int x = 200*((1) % 5) ;
-			int y = -900*((1)/ 5);
+			int x = 400 * ((faceNo) % 5);
+			int y = -900 * ((faceNo) / 5);
 
-			currentFace->shiftMesh(x,y-300);
+			currentFace->shiftMesh(x,y-500);
 
 		
 			
@@ -1260,7 +1260,7 @@ public:
 			for (int i = 0; i < currentFace->verts.size(); i++){
 
 				int cor;
-				float diff;
+				
 				ff >> cor;
 				//ff >> diff;
 				//cout << cor << endl;
