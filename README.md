@@ -8,7 +8,7 @@
 
 <p>  Use <b>CMakeLists</b>  to create Visual Studio 2013 solution. More commented and object-oriented code will be added soon.</p>
 
-<p>  The user interface is done through key presses.</p>
+<p>  The user interface is done through key presses. See guideline video <a href="https://youtu.be/5SP2JdjjteY" > https://youtu.be/5SP2JdjjteY</a> </p>
 
 
 <h2>  In <i>build\Release\faces</i> folder, there are 5 types of files:   </h2>

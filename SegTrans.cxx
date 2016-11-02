@@ -1084,7 +1084,8 @@ public:
 
 		if (key == "l"){
 
-			
+			std::cout << "give user name" << std::endl;
+			std::cin >> name;
 			vtkPoints *points = currPolyData->GetPoints();
 			segments.clear();
 			ifstream f;
@@ -1254,9 +1255,9 @@ public:
 			vtkDataArray * s = face->GetPointData()->GetScalars();
 
 			ifstream ff("faces\\corr"+to_string(faceNo)+".txt");
-			ofstream fff("segmentation_" + name + "_" + to_string(faceNo) + ".txt");
+			//ofstream fff("segmentation_" + name + "_" + to_string(faceNo) + ".txt");
 			int temp = segments.size();
-			fff << "13" << std::endl;
+			//fff << "13" << std::endl;
 			for (int i = 0; i < currentFace->verts.size(); i++){
 
 				int cor;
@@ -1265,7 +1266,7 @@ public:
 				//ff >> diff;
 				//cout << cor << endl;
 
-				fff << segments[cor] << std::endl;
+				//fff << segments[cor] << std::endl;
 				currSegments.push_back(segments[cor]);
 				
 				
@@ -1275,7 +1276,7 @@ public:
 				else
 					s->SetTuple1(i, 360);
 			}
-			fff.close();
+			//fff.close();
 			face->GetPointData()->SetScalars(s);
 			face->GetPointData()->GetScalars()->Modified();
 		
@@ -1290,7 +1291,7 @@ public:
 			renderer->AddActor(actor);
 			renderer->Modified();
 			/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+			/*
 			Mesh *currentFace2 = new Mesh();
 
 			if (!pointCloudMode)
@@ -1335,7 +1336,7 @@ public:
 
 			renderer->AddActor(actor2);
 			renderer->Modified();
-
+			*/
 			//////////////////////////////////////////////////////////////////////////////////////////////////
 			this->GetInteractor()->GetRenderWindow()->Render();
 			faceNo++;
@@ -1970,8 +1971,8 @@ int main()
 
 	//std::cout << "give user name" << std::endl;
 	//std::cin >> name;
-	std::cin >> faceNo;
-	
+	//std::cin >> faceNo;
+	faceNo = 2;
 	name = "initial";
 	initialFace = new Mesh();
 
