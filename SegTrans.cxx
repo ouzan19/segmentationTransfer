@@ -1379,6 +1379,27 @@ public:
 
 		}
 
+
+		if (key == "u"){
+
+		
+			ifstream f;
+			f.open("query/mount1.xyz");
+			float x, y, z;
+			vector<Vertex*> vertices;
+
+			for (int i = 0; i < 37; i++){
+
+				float* c = new float[3];
+				f >> c[0] >> c[1] >> c[2];
+
+				Vertex* v = new Vertex(i, c);
+				vertices.push_back(v);
+
+			}
+
+		}
+
 	
 		
 		// Forward events
@@ -1395,6 +1416,24 @@ private:
 };
 vtkStandardNewMacro(HighlightInteractorStyle);
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void fill(vector<Vertex*> verts){
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 vtkSmartPointer<vtkActor> getVectorActor(double* v, double* startPoint,double* color){
