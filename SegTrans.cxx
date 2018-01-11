@@ -1,18 +1,3 @@
-/*=========================================================================
-
-  Program:   Visualization Toolkit
-  Module:    Cube.cxx
-
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
-
-=========================================================================*/
-// This example shows how to manually create vtkPolyData.
 
 #include "vtkActor.h"
 #include "vtkCamera.h"
@@ -21,6 +6,7 @@
 #include "vtkPointData.h"
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
+#include "vtkPolygon.h"
 #include "vtkPolyDataMapper.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
@@ -95,6 +81,9 @@
 #include <time.h>
 #include <vtkTextProperty.h>
 #include <set>
+#include <queue>
+
+#define NUM_CONTOUR_POINTS 40
 
 class HighlightInteractorStyle;
 #define VTKISRBP_ORIENT 0
@@ -113,18 +102,58 @@ float s;
 vector<int> segments;
 int nVerts;
 Mesh* mesh, *mesh2, *averageFaceTemp, *averageFace;
-int numOfSegments = 36;
+int numOfSegments = 8;
 float colorPerSegment = 360 / numOfSegments;
 Mesh *initialFace, *currFace;
 bool pointCloudMode = false;
 int numOfSegs;
 string name;
+vtkSmartPointer<vtkScalarBarActor> scalarBar;
+
+//vector<int>  mouthPoints = { 553, 2239, 552, 4642, 559, 2252, 558, 4868, 4867, 4915, 4916, 5188, 3423, 3053, 936, 3067, 943, 3069, 944, 1850, 1854, 375, 1840, 377, 2767, 802, 3957, 1164, 4378, 1849, 3143, 3171, 4375, 3117, 3114, 3115, 4909, 4910, 6121, 4958, 4934, 2248, 6124, 1685, 5712, 5603, 5602 ,553};
+//vector<int>   nosePoints  = { 4988, 5480, 5481, 5485, 5474, 5473, 5475, 5564, 5562, 5561, 5395, 5394, 2541, 2539, 2540, 4624, 4626, 5400, 5397, 5396, 5399, 4590, 4588, 4592, 5159, 3382, 3381, 2787, 2786, 2789, 3819, 3636, 3635, 3638, 3639, 2824, 2823, 2135, 2132, 500, 2812, 828, 2846, 845, 3805, 1116, 3631, 760, 2697, 763, 3034, 364, 3036, 361, 1807, 4988 };
+
+
+vector<int>  mouthPoints = { 4749,4874,5000,5512,6024,6538,7054,7699,8215,8602,9118,9892,10408,10799,11062,11325,11585,11201,10308,9793,9148,8374,7600,7084,6437,5919,5400 ,4749};
+vector<int>   eye1 = {2088,2478,2865,3124,3385,3772,4159,4545,4932,5320,5706,6091,6215,5954,5567,5180,4790,4403,4016,3758,3371,2985,2599,2214,2088 };
+vector<int>   nosePoints = { 6981,6986,6993,7000,7011,7019,7026,6252,5607,5614,5749,5751,6525,7170,7815,8718,9621,10653,10907,11158,11026,9736,9731,9725,9719,9711,9705,9699,9692,9689,8915,8272,7759,6981};
+vector<int>   eye2 = {10349,10998,11772,12417,13191,13706,14220,14733,14467,13691,13174,12658,12142,11497,10983,10726,10212,10349};
+vector<int>  chick1 = {5200,5216,5235,4203,3171,3185,3457,3857,4254,46271,46509,46737,46049,45187,44020,23129,22471,22196,22430,22418,21757,22913,24200,25746,27423,2746,5200};
+vector<int>  chick2 = {11523,11531,11539,11547,11559,12333,13107,13115,13124,12877,12504,50153,50005,49792,50667,51568,52569,33192,33439,33425,32756,32869,32859,31954,31049,30015,29240,28594,27690,15910,15136,14361,13199,11523};
+vector<int> chin = { 5675,46794,46798,46807,47673,48258,48778,49366,49357,49353,10703,9671,8639,7091,5672,5675};
+vector<vector<int>> faceParts = { mouthPoints, nosePoints, eye1, eye2, chick1, chick2, chin };
+
+
+vector<int>  mouthPoints2 = { 1627,553,552,559,558,1509,1390,833,3422,3067,3069,944,1850,2844,375,377,3958,1846,3171,3114,1507,4933,4960,5714,5603,1627 };
+vector<int>   eye12 = { 527,4820,1601,4713,1431,4718,4717,4723,4726,4730,4733,4734,4735,4741,2386,2383,4809,4808,5502,4806,4804,2209,2207,2211,527 };
+vector<int>   nosePoints2 = { 4794,4835,4502,5393,5562,5395,2541,4624,5572,2581,2548,4581,809,2816,2585,2147,2769,3816,832,2823,500,828,845,3716,3714,3715,3721,3201,1806,2992,3775,3026,3024,4824,5532,4792,4794 };
+vector<int>   eye22 = { 1975,2942,2937,2935,2933,2931,2926,2924,2919,2917,2915,2912,2913,3020,2152,1815,1811,1813,3005,3006,3743,3011,3008,3010,3019,1974,1973,1975 };
+vector<int>  chick12 = {4994,5650,5627,5349,5348,4706,1633,5470,5467,4688,5388,5406,4508,4510,1340,5423,5303,4433,1289,5655,605,1677,5049,613,2409,4994  };
+vector<int>  chick22 = { 3208,3894,3871,3593,3615,3679,3711,3745,800,497,3644,767,2702,2713,1122,791,2744,3567,2621,3899,1966,4197,1018,3306,1996,3208 };
+vector<int> chin2 = { 5717,5463,4493,2684,3700,3704,3694,3674,446,2020,1951,2692,784,4499,2366,2432,5429,5719,5717 };
+vector<vector<int>> faceParts2 = { mouthPoints2, nosePoints2, eye12, eye22, chick12, chick22, chin2 };
+vector<vector<int>> completedFaceParts;
+vector<int> facePoints;
+
+void search(vector<graph::Vertex*> verts, vector<Vector*> path, vector<vector<graph::Edge*>> &allCandidates, vector<float> &costs);
 
 pair<float,float> HammingDistance(Mesh* mesh1, vector<int> segments1, vector<int> segments2);
 float randIndex(vector<int> segments1, vector<int> segments2);
 pair<float, float> consistencyError(Mesh* mesh, vector<int> segments1, vector<int> segments2);
 Mesh* getOnlySegmented(Mesh* mesh, vector<int> segments, vector<int> &oldIndices);
 float cutDiscrepancy(Mesh* mesh, vector<int> segments1, vector<int> segments2);
+
+vector<vector<int>> completeContoursByGeodesic(Mesh* cF, vector<vector<int>> inFaceParts);
+vector<vector<int>> findInnerContourVertices(Mesh* cF, vector<vector<int>> inFaceParts);
+vector<int**> extractContourFeatures(Mesh *face, vector<vector<int>> faceParts);
+float matchFaceParts(vector<int**> f1, vector<int**> f2);
+float matchContour(int**, int**);
+
+float triangleArea(vector<Vertex*> vertices, std::vector<int> hole, int v0, int v1, int v2);
+float holeCostFunc(vector<Vertex*> vertices, std::vector<int> hole, int i, int k, vector<int> &lamda);
+void trace(vector<Vertex*> vertices, std::vector<int> hole, int i, int k, vector<int> &lamda, vector<int> &newTriangles);
+
+vector<Vertex*> completeContour(vector<Vertex*> contourPoints);
 
 float dist2Between(float* p1, float* p2){
 
@@ -217,7 +246,6 @@ float PCAError(float** meshSubSet, float** voxSubSet, int n1, int n2, float** p1
 
 	return alignErr / n2;
 }
-
 
 void PCAposeNormalization(float** meshSubSet, float** voxSubSet, int n1, int n2, float** bestMeshRot, float ** bestVoxRot)
 {
@@ -639,7 +667,6 @@ void PCAAlignment(Mesh* face1, Mesh* face2){
 
 }
 
-
 void initialFineRigidAlignment(Mesh* face1, Mesh* face2){
 
 	ICP icp;
@@ -650,23 +677,31 @@ void initialFineRigidAlignment(Mesh* face1, Mesh* face2){
 void alignDatabase(){
 
 	int lambda = 1;
-	averageFace = new Mesh();
+	/*averageFace = new Mesh();
 
 	if(!pointCloudMode)
 		averageFace->loadOff("faces\\face1.off");
 	else 
 		averageFace->loadxyz("faces\\face1.xyz");
+	*/
+	//s = averageFace->calculateScale();
 
-	s = averageFace->calculateScale();
-
-
+	/*
 	Mesh *initialFace = new Mesh();
 
 	if (!pointCloudMode)
 		initialFace->loadOff("faces\\face1.off");
 	else
 		initialFace->loadxyz("faces\\face1.xyz");
-	
+	*/
+
+	ofstream of("faces\\corr1.txt");
+
+	for (int i = 0; i < initialFace->verts.size(); i++)
+		of << i << std::endl;
+
+	of.close();
+
 
 	int i = 2;
 	string s1 = "faces\\face";
@@ -677,15 +712,18 @@ void alignDatabase(){
 	
 	float tt = 0;
 
-	for (int face = faceNo; face <= faceNo; face++){
-		
+	for (int face = 2; face <= 100; face++){
+		std::cout << "			" << face << std::endl;
 		averageFaceTemp = new Mesh();
 		if (!pointCloudMode)
 			averageFaceTemp->loadOff("faces\\face1.off");
 		else
 			averageFaceTemp->loadxyz("faces\\face1.xyz");
 
-		averageFaceTemp->initialize();
+		//averageFaceTemp->scale(0.001);
+		//averageFaceTemp->write("faces\\scaled1.off");
+		//averageFaceTemp->initialize();
+		
 
 		string path, path2, path3, path4, path5;
 		if (!pointCloudMode){
@@ -710,7 +748,8 @@ void alignDatabase(){
 		else
 			mesh->loadxyz((char*)path.c_str());
 		
-
+		//mesh->scale(0.001);
+		//mesh->write((char*)("faces\\scaled" + to_string(face) + ".off").c_str());
 		/*
 		string path6 = "faces\\face" + to_string(face) + ".xyz";
 		ofstream fp;
@@ -732,18 +771,18 @@ void alignDatabase(){
 
 		const clock_t begin_time = clock();
 
-		PCAAlignment(averageFaceTemp, mesh);
+		//PCAAlignment(averageFaceTemp, mesh);
 		//mesh->write((char*)path4.c_str(), !pointCloudMode);
 
 		
 
-		initialFineRigidAlignment(averageFaceTemp, mesh);
+		//initialFineRigidAlignment(averageFaceTemp, mesh);
 	
 		//mesh->write((char*)path5.c_str(), !pointCloudMode);
 
 		mesh->initialize();
-		mesh->deform(averageFaceTemp, 100000, 10);
-		//mesh->write((char*)path3.c_str(), !pointCloudMode);
+		mesh->deform(averageFaceTemp, 1000, 50);
+		mesh->write((char*)path3.c_str(), !pointCloudMode);
 		
 
 		ofstream ff;
@@ -789,16 +828,54 @@ void alignDatabase(){
 		kd_free(kd);
 		ff.close();
 		delete averageFaceTemp;
+		delete mesh;
 	}
 
 
-	std::cout << tt/19 <<std::endl ;
+	//std::cout << tt/19 <<std::endl ;
 	
 
 	//averageFace->write("averageFaceInc.off");
 }
-
+vector<float*> query;
+Mesh* input;
 bool isFirst = true;
+
+
+void createInputFile(Mesh* m, vector<vector<int>> indexVector){
+
+	ofstream off("inputPoints.xyz");
+	for (int fp = 0; fp < indexVector.size(); fp++){
+		for (int p = 0; p < indexVector[fp].size(); p++){
+
+			int vid = indexVector[fp][p];
+			float x, y, z;
+			x = m->verts[vid]->coords[0];
+			y = m->verts[vid]->coords[1];
+			z = m->verts[vid]->coords[2];
+			off << x << " " << y << " " << z << endl;
+
+		}
+	}
+
+	off.close();
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Define interaction style
 class HighlightInteractorStyle : public vtkInteractorStyleRubberBandPick
 {
@@ -893,8 +970,7 @@ public:
 			currPolyData->GetPointData()->SetScalars(s);
 			currPolyData->GetPointData()->GetScalars()->Modified();
 
-			currPolyData->GetPointData()->SetScalars(s);
-			currPolyData->GetPointData()->GetScalars()->Modified();
+			
 			
 			
 	
@@ -910,8 +986,6 @@ public:
 	virtual void OnRightButtonUp(){
 
 		vtkInteractorStyleRubberBandPick::OnRightButtonUp();
-		
-
 	}
 
 	virtual void OnKeyPress()
@@ -919,11 +993,98 @@ public:
 		// Get the keypress
 		vtkRenderWindowInteractor *rwi = this->Interactor;
 		std::string key = rwi->GetKeySym();
-
+		
 		// Output the key that was pressed
 		std::cout << "Pressed " << key << std::endl;
 
-		// Handle an arrow key
+		if (key == "j"){
+			
+			//vtkDataArray * s = currPolyData->GetPointData()->GetScalars();
+
+			ofstream of("inputPoints.xyz");
+			for (int fp = 0; fp < faceParts.size(); fp++){
+				for (int p = 0; p < faceParts[fp].size(); p++){
+
+					int vid = faceParts[fp][p];
+					float x, y, z;
+					x = initialFace->verts[vid]->coords[0];
+					y = initialFace->verts[vid]->coords[1];
+					z = initialFace->verts[vid]->coords[2];
+					of << x <<" "<< y <<" "<< z << endl;
+
+					//s->SetTuple1(vid, fp * 50 + 10 );
+
+				}
+			}
+
+			of.close();
+
+
+			//currPolyData->GetPointData()->SetScalars(s);
+			//currPolyData->GetPointData()->GetScalars()->Modified();
+			//this->GetInteractor()->GetRenderWindow()->Render();
+			//this->HighlightProp(NULL);
+
+		}
+
+		if (key == "h"){
+
+
+			vector<vector<int>> innerPoints = { {}, {}, {}, {}, {}, {}, {} };
+			vtkDataArray * s = currPolyData->GetPointData()->GetScalars();
+			std::ifstream f("segmented2.xyz");
+
+			for (int i = 0; i < initialFace->verts.size(); i++){
+
+				float x, y, z;
+				int   r, g, b;
+				f >> x >> y >> z;
+				f >> r >> g >> b;
+
+				int colorId = -1;
+
+				if (r == 0 && g == 0 && b == 0) colorId = 0;  // mouth
+				if (r == 255 && g == 255 && b == 0) colorId = 1;  // chin
+				if (r == 255 && g == 0 && b == 255) colorId = 2;  // nose
+				if (r == 0 && g == 255 && b == 255) colorId = 3;  // left eye
+				if (r == 0 && g == 255 && b == 0) colorId = 4;  // left chick
+				if (r == 0 && g == 0 && b == 255) colorId = 5;  // right chick
+				if (r == 255 && g == 0 && b == 0) colorId = 6;  // right eye
+
+				segments[i] = colorId;
+				isSelected[i] = colorId != -1;
+
+			}
+			f.close();
+			for (int i = 0; i < initialFace->verts.size(); i++){
+
+				int partId;
+				int cid = segments[i];
+				if (cid == -1)
+					continue;
+
+
+				if (cid == 0) partId = 0;
+				if (cid == 1) partId = 6;
+				if (cid == 2) partId = 1;
+				if (cid == 3) partId = 2;
+				if (cid == 4) partId = 4;
+				if (cid == 5) partId = 5;
+				if (cid == 6) partId = 3;
+
+				innerPoints[partId].push_back(i);
+				s->SetTuple1(i, 50 * partId + 10);
+				
+			}
+
+
+			currPolyData->GetPointData()->SetScalars(s);
+			currPolyData->GetPointData()->GetScalars()->Modified();
+			this->GetInteractor()->GetRenderWindow()->Render();
+			this->HighlightProp(NULL);
+			
+		}
+
 		if (key == "space")
 		{
 			c += colorPerSegment;
@@ -1013,6 +1174,7 @@ public:
 
 			
 			*/
+			/*
 			ofstream f;
 			f.open("segmentation_"+name+"_"+to_string(faceNo)+".txt");
 
@@ -1023,7 +1185,7 @@ public:
 
 			f.close();
 
-			
+			*/
 
 			/*
 			vtkDataArray * s = cube->GetPointData()->GetScalars();
@@ -1041,30 +1203,31 @@ public:
 		}
 
 		if (key == "m"){
-			/*
-			vector<int> oldVertices;
-			Mesh* m = getOnlySegmented(currFace, segments, oldVertices);
-			renderer->RemoveActor(renderer->GetActors()->GetLastActor());
+		
+			int i = 8;
+			string meshPath = "faces\\face" + to_string(i) + ".off";
+			input = new Mesh();
+			input->loadOff((char*)meshPath.c_str());
+			input->assignNormalsToTriangles();
+			input->findNeighborhoodTriangles();
+			input->calculateDihedrals();
 
+			vtkPolyData* face = input->getVTKPolyData();
 
-			vector<int> bound = cutDiscrepancy(currFace, segments, segments);
-
-			vtkPolyData *face;
-			//cube->Delete();
-			face = m->getVTKPolyData(!pointCloudMode);
 			vtkDataArray * s = face->GetPointData()->GetScalars();
+			int nVerts = face->GetPoints()->GetNumberOfPoints();
+
+			for (int i = 0; i < nVerts; i++) {
 
 
-			for (int i = 0; i < bound.size(); i++){
-
-				
-
-					int v = find(oldVertices.begin(), oldVertices.end(), bound[i]) - oldVertices.begin();
-
-					s->SetTuple1(v, 50 );
-
-				
+				if (input->verts[i]->dihedral > 20)
+					s->InsertTuple1(i, 200);
+				else s->InsertTuple1(i, 0);
 			}
+
+
+			face->GetPointData()->SetScalars(s);
+			face->GetPointData()->GetScalars()->Modified();
 
 			vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
 			mapper->SetInputData(face);
@@ -1074,12 +1237,12 @@ public:
 			actor->SetMapper(mapper);
 			actor->GetProperty()->SetPointSize(5);
 
+			renderer->RemoveActor(renderer->GetActors()->GetLastActor());
 
 			renderer->AddActor(actor);
 			renderer->Modified();
-
 			this->GetInteractor()->GetRenderWindow()->Render();
-			*/
+
 		}
 
 		if (key == "l"){
@@ -1102,8 +1265,10 @@ public:
 				segments.push_back(temp);
 
 			}
+			f.close();
 
 
+			
 			vtkDataArray * s = currPolyData->GetPointData()->GetScalars();
 		
 			for (int k = 0; k < points->GetNumberOfPoints(); k++){
@@ -1115,17 +1280,33 @@ public:
 					else 
 						s->SetTuple1(k, 360);
 			}
-
-
 			currPolyData->GetPointData()->SetScalars(s);
 			currPolyData->GetPointData()->GetScalars()->Modified();
 
+
+			/*
+			initialFace->shiftMesh(200, 0);
+			vector<int> segment;
+			for (int k = 0; k < segments.size(); k++)
+				if (segments[k] == 0)
+					segment.push_back(k);
+
+			vtkPolyData *segmentPolyData = initialFace->getVTKPolyDataSubsetByVertices(segment);
+
+			vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+			mapper->SetInputData(segmentPolyData);
+			mapper->SetScalarRange(0, 360);
+
+			vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+			actor->SetMapper(mapper);
+			actor->GetProperty()->SetPointSize(5);
+
+			renderer->AddActor(actor);
+			renderer->Modified();
+			style->SetPolyData(segmentPolyData);
+			*/
 			
-
-			//this->SelectedActor->GetProperty()->SetColor(1.0, 0.0, 0.0); //(R,G,B)
-			//this->SelectedActor->GetProperty()->SetPointSize(5);
-
-			//this->GetInteractor()->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->AddActor(SelectedActor);
+			renderWindowInteractor->SetInteractorStyle(style);
 			this->GetInteractor()->GetRenderWindow()->Render();
 
 		}
@@ -1139,7 +1320,6 @@ public:
 
 			std::cout << "segments	" << c << "		" << segments.size() << std::endl;
 		}
-
 
 		if (key == "n"){
 
@@ -1217,6 +1397,7 @@ public:
 				//renderer->RemoveActor(renderer->GetActors()->GetLastActor());
 			//}
 			//isFirst = false;
+			faceNo++;
 			string path;
 			if (!pointCloudMode)
 				path= "faces\\face" + std::to_string(faceNo) + ".off";
@@ -1238,10 +1419,10 @@ public:
 			//numOfSegs = initialFace->smoothAllNormals(10000);
 			//currentFace->angleXY();
 
-			int x = 400 * ((faceNo) % 5);
-			int y = -900 * ((faceNo) / 5);
+			int x = 100000 * ((faceNo) % 5);
+			int y = -200000 * ((faceNo) / 5);
 
-			currentFace->shiftMesh(x,y-500);
+			currentFace->shiftMesh(x,y-100000);
 
 		
 			
@@ -1339,7 +1520,7 @@ public:
 			*/
 			//////////////////////////////////////////////////////////////////////////////////////////////////
 			this->GetInteractor()->GetRenderWindow()->Render();
-			faceNo++;
+			//faceNo++;
 			
 			/*pair<float,float> hd = HammingDistance(currentFace, segments, currSegments);
 			float randIndexError = randIndex(segments, currSegments);
@@ -1375,34 +1556,1319 @@ public:
 		}
 
 		if (key == "Shift_L"){
-
 			alignDatabase();
-
 		}
-
 
 		if (key == "u"){
 
-		
-			ifstream f;
-			f.open("query/mount1.xyz");
-			float x, y, z;
-			vector<Vertex*> vertices;
+			string filename = "query\\random.xyz";
+			std::ifstream inFile(filename);
+			int size =  std::count(std::istreambuf_iterator<char>(inFile),
+				std::istreambuf_iterator<char>(), '\n');
 
-			for (int i = 0; i < 37; i++){
+			ifstream f;
+			f.open(filename);
+			query.clear();
+			for (int i = 0; i < size; i++){
 
 				float* c = new float[3];
 				f >> c[0] >> c[1] >> c[2];
+				query.push_back(c);
+	
+			}
 
-				Vertex* v = new Vertex(i, c);
-				vertices.push_back(v);
+			std::vector<Vector*> path;
+			for (int i = 1; i < query.size(); i++){
+
+				path.push_back(new Vector(query[i - 1][0] - query[i][0],
+					query[i - 1][1] - query[i][1],
+					query[i - 1][2] - query[i][2])
+					);
 
 			}
 
+			int matchId = -1;
+			float globalMinCost = 999999999;
+			vector<int> minVertices;
+
+			for (int i = 12; i < 13;i++){
+
+					if (i == 4 || i==11)
+						continue;
+					string meshPath =  "faces\\face" + to_string(i) + ".off";
+					string outPath = "query\\out" + to_string(i) + ".xyz";
+					 input = new Mesh();
+					input->loadOff((char*) meshPath.c_str());
+
+					vector<graph::Vertex*> vectorGraph = input->createVectorGraph();
+
+					vector<vector<graph::Edge*>> allCandidates;
+					vector<float> costs;
+					search(vectorGraph, path, allCandidates, costs);
+
+					for (int can = 0; can < allCandidates.size(); can++){
+
+						if (allCandidates[can].size() > 10){
+							cout << allCandidates[can].size() << " " << costs[can] << endl;
+
+							
+							string outPath = "candidate" + to_string(can) + ".xyz";
+							std::ofstream fff(outPath);
+							for (int i = 0; i < allCandidates[can].size(); i++){
+
+								int ind = allCandidates[can][i]->from->id;
+								fff << input->verts[ind]->coords[0] << " " << input->verts[ind]->coords[1] << " " << input->verts[ind]->coords[2] << std::endl;
+								cout << "	" << allCandidates[can][i]->from->id;
+
+							}
+
+							int ind = allCandidates[can][allCandidates[can].size() - 1]->to->id;
+							fff << input->verts[ind]->coords[0] << " " << input->verts[ind]->coords[1] << " " << input->verts[ind]->coords[2] << std::endl;
+							cout << "	" << allCandidates[can][allCandidates[can].size() - 1]->to->id;
+							fff.close();
+						
+
+						}
+
+						
+					}
+
+					float minCost = 999999;
+					int minIndex = -1;
+					std::cout << i<<"  ";
+					if (allCandidates.size()){
+
+						
+						std::cout << "match found with ";
+						for (int j = 0; j < costs.size(); j++){
+
+							int score = allCandidates[j].size() - size;
+							score = abs(score);
+
+							if (score < minCost){
+
+								minCost = score;
+								minIndex = j;
+							}
+							//cout << costs[i] << endl;
+						}
+
+						if (minCost < globalMinCost){
+
+							globalMinCost = minCost;
+							matchId = i;
+
+							minVertices.clear();
+							for (int i = 0; i < allCandidates[minIndex].size(); i++){
+
+								minVertices.push_back(allCandidates[minIndex][i]->from->id);
+						
+							}
+
+							minVertices.push_back(allCandidates[minIndex][allCandidates[minIndex].size() - 1]->to->id);
+							
+
+						}
+
+						//std::cout << minIndex << "	is chosen" << std::endl;
+						std::cout  << minCost << std::endl;
+						std::ofstream fff(outPath);
+						for (int i = 0; i < allCandidates[minIndex].size(); i++){
+
+							int ind = allCandidates[minIndex][i]->from->id;
+							fff << input->verts[ind]->coords[0] << " " << input->verts[ind]->coords[1] << " " << input->verts[ind]->coords[2] << std::endl;
+							cout << "	" << allCandidates[minIndex][i]->from->id;
+
+						}
+
+						int ind = allCandidates[minIndex][allCandidates[minIndex].size() - 1]->to->id;
+						fff << input->verts[ind]->coords[0] << " " << input->verts[ind]->coords[1] << " " << input->verts[ind]->coords[2] << std::endl;
+						cout << "	" << allCandidates[minIndex][allCandidates[minIndex].size() - 1]->to->id;
+						fff.close();
+
+					}
+					else
+					std::cout << "no match" << std::endl;
+		}
+			
+			if (matchId != -1){
+				Mesh* bestFace = new Mesh();
+				bestFace->loadOff((char*)("faces\\face" + to_string(matchId) + ".off").c_str());
+
+				ifstream ff;
+				ff.open("segmentation_" + name + "_" + to_string(matchId) + ".txt");
+
+				int segSize;
+				ff >> segSize;
+
+				vector<int> part;
+				for (int i = 0; i < bestFace->verts.size(); i++){
+
+					int temp;
+					ff >> temp;
+					if (temp == 0)
+						part.push_back(i);
+
+				}
+				ff.close();
+
+				renderer->RemoveActor(renderer->GetActors()->GetLastActor());
+
+				vtkPolyData *segmentPolyData = bestFace->getVTKPolyDataSubsetByVertices(part);
+
+				vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+				mapper->SetInputData(segmentPolyData);
+				mapper->SetScalarRange(0, 360);
+
+				vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+				actor->SetMapper(mapper);
+				actor->GetProperty()->SetPointSize(5);
+
+				renderer->AddActor(actor);
+				renderer->Modified();
+				style->SetPolyData(segmentPolyData);
+
+
+				renderWindowInteractor->SetInteractorStyle(style);
+				this->GetInteractor()->GetRenderWindow()->Render();
+			}
+			cout << "done" << endl;
+		}
+		
+		if (key == "p"){
+		
+			string path;
+			if (!pointCloudMode)
+				path =  "faces\\face" + std::to_string(faceNo) + ".off";
+			else
+				path = "faces\\face" + std::to_string(faceNo) + ".xyz";
+
+			Mesh *currentFace = new Mesh();
+
+			if (!pointCloudMode)
+				currentFace->loadOff((char*)path.c_str());
+			else
+				currentFace->loadxyz((char*)path.c_str());
+
+			currentFace->findNeighborhoodTriangles();
+			currentFace->assignNormalsToTriangles();
+			//initialFace->calculateDihedrals();
+			//numOfSegs = initialFace->smoothAllNormals(10000);
+			//currentFace->angleXY();
+
+			int x = 250000 * ((faceNo-1) % 5);
+			int y = -250000 * ((faceNo - 1) / 5);
+
+			currentFace->shiftMesh(x, y );
+
+
+
+			vector<int> currSegments;
+
+			vtkPolyData *face;
+			//cube->Delete();
+			face = currentFace->getVTKPolyData(!pointCloudMode);
+
+			
+	        
+
+
+			int nVerts = face->GetPoints()->GetNumberOfPoints();
+			vtkDataArray * s = face->GetPointData()->GetScalars();
+
+			for (int i = 0; i < currentFace->verts.size(); i++)
+				s->SetTuple1(i, 360);
+
+			ifstream ff("faces\\corr" + to_string(1) + ".txt");
+
+			int temp = segments.size();
+			vector<int> corrs;
+			for (int i = 0; i < currentFace->verts.size(); i++){
+
+				int cor;
+				ff >> cor;
+				corrs.push_back(cor);
+
+			}
+
+			
+			vector<vector<int>> correspondedFaceParts;
+
+
+			for (int i = 0; i < faceParts.size(); i++){
+
+				vector<int> temp;
+				for (int p = 0; p < faceParts[i].size(); p++){
+
+					int refIndex = faceParts[i][p];
+					int inputIndex = corrs[refIndex];
+					//cout << refIndex << " " << inputIndex << std::endl;
+					//s->SetTuple1(refIndex, 0);
+					//s->SetTuple1(inputIndex, 360);
+					temp.push_back(inputIndex);
+
+				}
+
+				correspondedFaceParts.push_back(temp);
+
+			}
+	
+			completedFaceParts = completeContoursByGeodesic(currentFace, faceParts);
+			
+			vector<vector<int>> innerPoints = findInnerContourVertices(currentFace,completedFaceParts);
+			
+			
+
+			for (int fp = 0; fp < innerPoints.size(); fp++){
+				for (int p = 0; p < innerPoints[fp].size(); p++){
+
+					s->SetTuple1(innerPoints[fp][p], 10+fp*50);
+				}
+			}
+
+			for (int fp = 0; fp < faceParts.size(); fp++){
+				for (int p = 0; p < completedFaceParts[fp].size(); p++){
+
+					s->SetTuple1(completedFaceParts[fp][p], 100);
+
+					
+				}
+			}
+
+			/*
+			int rs[7] = { 0, 255, 255,   0,   0,   0, 255 };
+			int gs[7] = { 0, 255,   0, 255, 255,   0,   0 };
+			int bs[7] = { 0,   0, 255, 255,   0, 255,   0 };
+			std::ofstream off("segmented.xyz");
+			for (int pp = 0; pp < nVerts; pp++){
+
+				bool isContour = false;
+
+				for (int fp = 0; fp < faceParts.size(); fp++){
+					for (int p = 0; p < completedFaceParts[fp].size(); p++){
+
+						if (pp == completedFaceParts[fp][p]){
+							isContour = true;
+
+							double *coords;
+							coords = face->GetPoints()->GetPoint(pp);
+
+							off << coords[0] << " " << coords[1] << " " << coords[2] << " " << rs[fp] << " " << gs[fp] << " " << bs[fp] << endl;
+
+							break;
+						}
+						
+					}
+				}
+
+				if (!isContour){
+
+					double *coords;
+					coords = face->GetPoints()->GetPoint(pp);
+
+					off << coords[0] << " " << coords[1] << " " << coords[2] << " " << 255 << " " << 255 << " " << 255 << endl;
+				}
+
+			}
+
+			off.close();
+			*/
+			s->Modified();
+			face->GetPointData()->SetScalars(s);
+			face->GetPointData()->GetScalars()->Modified();
+
+			vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+			mapper->SetInputData(face);
+			mapper->SetScalarRange(0, 360);
+
+			vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+			actor->SetMapper(mapper);
+			actor->GetProperty()->SetPointSize(5);
+
+			renderer->AddActor(actor);
+			renderer->Modified();
+			this->GetInteractor()->GetRenderWindow()->Render();
+			
+			
+			
+			
+
+			
+			faceNo++;
+
+		
 		}
 
-	
+		if (key == "comma"){
+
+
+			string path;
+			if (!pointCloudMode)
+				path = "faces\\face" + std::to_string(faceNo) + ".off";
+			else
+				path = "faces\\face" + std::to_string(faceNo) + ".xyz";
+
+			Mesh *currentFace = new Mesh();
+
+			if (!pointCloudMode)
+				currentFace->loadOff((char*)path.c_str());
+			else
+				currentFace->loadxyz((char*)path.c_str());
+
+
+
+			currentFace->findNeighborhoodTriangles();
+			currentFace->assignNormalsToTriangles();
+			//initialFace->calculateDihedrals();
+			//numOfSegs = initialFace->smoothAllNormals(10000);
+			//currentFace->angleXY();
+
+			int x = 400 * ((faceNo - 1) % 5);
+			int y = -400 * ((faceNo - 1) / 5);
+
+			currentFace->shiftMesh(x, y);
+
+			float avgEdgeLen = 0.0f;
+			for (int i = 0; i < currentFace->edges.size(); i++)
+				avgEdgeLen += currentFace->edges[i]->length;
+
+			avgEdgeLen /= currentFace->edges.size();
+
+			vtkPolyData *face;
+			//cube->Delete();
+			face = currentFace->getVTKPolyData(!pointCloudMode);
+
+			int nVerts = face->GetPoints()->GetNumberOfPoints();
+			vtkDataArray * s = face->GetPointData()->GetScalars();
+
+			ifstream ff("faces\\corr" + to_string(faceNo) + ".txt");
+
+			int temp = segments.size();
+			vector<int> corrs;
+			for (int i = 0; i < currentFace->verts.size(); i++){
+
+				int cor;
+				ff >> cor;
+				corrs.push_back(cor);
+
+			}
+
+			
+
+			vector<float> dists;
+			vector<float*> distColors;
+			vector<Vertex*> verts2 = currentFace->verts;
+			float maxDist=0;
+			for (int i = 0; i < nVerts; i++){
+
+				face->GetPoint(i);
+				float dist = sqrt(pow(verts2[i]->coords[0] - verts2[corrs[i]]->coords[0], 2)
+					+ pow(verts2[i]->coords[1] - verts2[corrs[i]]->coords[1], 2)
+					+ pow(verts2[i]->coords[2] - verts2[corrs[i]]->coords[2], 2));
+
+				dist /= avgEdgeLen;
+
+				if (dist > maxDist)
+					maxDist = dist;
+
+				dists.push_back(dist);
+
+			}
+
+			for (int i = 0; i < initialFace->verts.size(); i++)
+				s->SetTuple1(i,dists[i]/maxDist);
+
+			face->GetPointData()->SetScalars(s);
+			face->GetPointData()->GetScalars()->Modified();
+
+
+			
+
+			// Create a lookup table to share between the mapper and the scalarbar
+			vtkSmartPointer<vtkLookupTable> hueLut =
+				vtkSmartPointer<vtkLookupTable>::New();
+			hueLut->SetTableRange(0, maxDist);
+			hueLut->SetHueRange(0, 1);
+			hueLut->SetSaturationRange(1, 1);
+			hueLut->SetValueRange(0, 1);
+			hueLut->Build();
+
+
+			vtkSmartPointer<vtkPolyDataMapper> mapper2 = vtkSmartPointer<vtkPolyDataMapper>::New();
+			mapper2->SetLookupTable(hueLut);
+			mapper2->SetInputData(face);
+
+
+			vtkSmartPointer<vtkLookupTable> hueLut2 =
+				vtkSmartPointer<vtkLookupTable>::New();
+			hueLut2->SetTableRange(0, maxDist);
+			hueLut2->SetHueRange(0, 1);
+			hueLut2->SetSaturationRange(1, 1);
+			hueLut2->SetValueRange(0, 1);
+			hueLut2->Build();
+
+
+			if (scalarBar){
+				
+				renderer->RemoveActor2D(scalarBar);
+			}
+
+			scalarBar =	vtkSmartPointer<vtkScalarBarActor>::New();
+			scalarBar->SetLookupTable(hueLut2);
+
+			double pos[2] = { 100, 100 };
+			scalarBar->SetNumberOfLabels(4);
+			scalarBar->SetWidth(scalarBar->GetWidth() / 3);
+			scalarBar->SetHeight(scalarBar->GetHeight()*0.75);
+
+			//scalarBar->SetLabelTextProperty();
+
+			double cc[3] = { 0, 0, 1 };
+			vtkTextProperty* tp = scalarBar->GetLabelTextProperty();
+			tp->SetFontSize(100);
+			tp->SetColor(cc);
+			//tp->Modified();
+			scalarBar->SetLabelTextProperty(tp);
+			//scalarBar->Modified();
+			//scalarBar->SetLookupTable(hueLut);
+			scalarBar->Modified();
+			renderer->AddActor2D(scalarBar);
+
+			
+			vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+			actor->SetMapper(mapper2);
+			actor->GetProperty()->SetPointSize(5);
+			
+			
+			renderer->AddActor(actor);
+			renderer->Modified();
+			this->GetInteractor()->GetRenderWindow()->Render();
+			faceNo++;
+		}
+
+		if(key == "b"){
+
+
+			
+
+
+			vector<vector<int**>> faceHists;
+			for(int i=1;i<=5000;i++){
+
+				string path;
+				if (!pointCloudMode)
+					path = "faces\\face" + std::to_string(i) + ".off";
+				else
+					path = "faces\\face" + std::to_string(i) + ".xyz";
+
+				Mesh *currentFace = new Mesh();
+
+				if (!pointCloudMode)
+					currentFace->loadOff((char*)path.c_str());
+				else
+					currentFace->loadxyz((char*)path.c_str());
+
+				/*
+				int x = 200000  * ((i - 1) % 5);
+				int y = -200000 * ((i - 1) / 5);
+
+				currentFace->shiftMesh(x, y);
+				vtkPolyData *face;
+				//cube->Delete();
+				
+				face = currentFace->getVTKPolyData(!pointCloudMode);
+				
+				vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+				mapper->SetInputData(face);
+				mapper->SetScalarRange(0, 360);
+
+				vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+				actor->SetMapper(mapper);
+				actor->GetProperty()->SetPointSize(5);
+
+				renderer->AddActor(actor);
+				renderer->Modified();
+				*/
+
+				ifstream ff("faces\\corr" + to_string(1) + ".txt");
+				vector<int> corrs;
+				for (int j = 0; j < 53490; j++){
+
+					int cor;
+					ff >> cor;
+					corrs.push_back(cor);
+
+				}
+				ff.close();
+
+				vector<vector<int>> correspondedFaceParts;
+
+				for (int j = 0; j < faceParts.size(); j++){
+
+					vector<int> temp;
+					for (int p = 0; p < faceParts[j].size(); p++){
+
+						int refIndex = faceParts[j][p];
+						int inputIndex = corrs[refIndex];
+						//cout << refIndex << " " << inputIndex << std::endl;
+						//s->SetTuple1(refIndex, 0);
+						//s->SetTuple1(inputIndex, 360);
+						temp.push_back(refIndex);
+
+					}
+
+					correspondedFaceParts.push_back(temp);
+
+				}
+
+				vector<int**> partHists;
+				partHists = extractContourFeatures(currentFace, correspondedFaceParts);
+
+				ofstream hf("faces\\contourFeatures" + to_string(i) + ".txt");
+
+				hf << partHists.size() << " " << NUM_CONTOUR_POINTS << " " << 80 << endl;
+
+				for (int h = 0; h < partHists.size(); h++){
+
+					for (int p = 0; p < NUM_CONTOUR_POINTS; p++){
+
+						for (int q = 0; q < 80; q++)
+							hf << partHists[h][p][q] << " ";
+
+						hf << endl;
+
+					}
+				}
+				hf.close();
+
+				//faceHists.push_back(partHists);
+				for (int h = 0; h < partHists.size(); h++){
+
+					for (int p = 0; p < NUM_CONTOUR_POINTS; p++)
+					{
+						delete partHists[h][p];
+
+					}
+
+					delete partHists[h];
+				}
+				delete currentFace;
+				std::cout << i << std::endl;
+			}
+
+			cout << "---------------------------------------\n";
+			/*for (int j = 0; j < 100; j++){
+
+				std::cout << matchFaceParts(faceHists[0], faceHists[j]) << std::endl;
+			}*/
+
+			std::cout << "done\n";
+		}
+
+		if (key == "c"){
+
+			string path;
+			if (!pointCloudMode)
+				path = "faces\\face" + std::to_string(faceNo) + ".off";
+			else
+				path = "faces\\face" + std::to_string(faceNo) + ".xyz";
+
+			Mesh *currentFace = new Mesh();
+
+			if (!pointCloudMode)
+				currentFace->loadOff((char*)path.c_str());
+			else
+				currentFace->loadxyz((char*)path.c_str());
+
+			
+
+			int x = 250000 * ((faceNo - 1) % 5);
+			int y = -250000 * ((faceNo - 1) / 5);
+
+			currentFace->shiftMesh(x, y);
+
+			vector<int> currSegments;
+			vtkPolyData *face;
+			//cube->Delete();
+			face = currentFace->getVTKPolyData(!pointCloudMode);
+
+			int nVerts = face->GetPoints()->GetNumberOfPoints();
+			vtkDataArray * s = face->GetPointData()->GetScalars();
+
+			for (int i = 0; i < currentFace->verts.size(); i++)
+				s->SetTuple1(i, 360);
+
+			s->Modified();
+			face->GetPointData()->SetScalars(s);
+			face->GetPointData()->GetScalars()->Modified();
+
+			vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+			mapper->SetInputData(face);
+			mapper->SetScalarRange(0, 360);
+
+			vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+			actor->SetMapper(mapper);
+			actor->GetProperty()->SetPointSize(5);
+
+			renderer->AddActor(actor);
+			renderer->Modified();
+			this->GetInteractor()->GetRenderWindow()->Render();
+
+
+			vector<int**> faceHist, referenceHist;
+			int numParts, numHists, lenHists;
+
+			ifstream f("faces\\contourFeatures" + to_string(faceNo) + ".txt");
+
+			f >> numParts >> numHists >> lenHists;
+
+			for (int i = 0; i < numParts; i++){
+
+				int** hist = new int*[numHists];
+				for (int j = 0; j < numHists; j++){
+
+					hist[j] = new int[lenHists];
+					for (int k = 0; k < lenHists; k++){
+
+						int temp;
+						f >> temp;
+						hist[j][k] = temp;
+
+					}
+				}
+
+				faceHist.push_back(hist);
+			}
+
+			f.close();
+
+
+			ifstream f2("faces\\contourFeatures1.txt");
+
+			f2 >> numParts >> numHists >> lenHists;
+
+			for (int i = 0; i < numParts; i++){
+
+				int** hist = new int*[numHists];
+				for (int j = 0; j < numHists; j++){
+
+					hist[j] = new int[lenHists];
+					for (int k = 0; k < lenHists; k++){
+
+						int temp;
+						f2 >> temp;
+						hist[j][k] = temp;
+
+					}
+				}
+
+				referenceHist.push_back(hist);
+			}
+
+			f2.close();
+
+
+			for (int j = 0; j < numParts; j++){
+
+				std::cout << matchContour(faceHist[j], referenceHist[j]) << std::endl;
+			}
+
+			for (int i = 0; i < faceHist.size(); i++){
+				for (int j = 0; j < numHists; j++){
+
+					delete faceHist[i][j];
+				}
+				delete faceHist[i];
+			}
+
+			for (int i = 0; i < referenceHist.size(); i++){
+				for (int j = 0; j < numHists; j++){
+
+					delete referenceHist[i][j];
+				}
+				delete referenceHist[i];
+			}
+
+
+			faceNo++;
+		}
+
+		if (key == "f"){
+			
+			//Mesh* aface = new Mesh();
+			//aface->loadOff("faces\\face1.off");
+			//aface->findNeighborhoodTriangles();
+			//completedFaceParts = completeContoursByGeodesic(aface, faceParts2);
+			//vector<vector<int>> innerPoints = findInnerContourVertices(aface, completedFaceParts);
+
+			vector<vector<int>> innerPoints={{}, {}, {}, {}, {}, {}, {} };
+
+			std::ifstream f("segmented2.xyz");
+
+			for (int i = 0; i < initialFace->verts.size(); i++){
+
+				float x, y, z;
+				int   r, g, b;
+				f >> x >> y >> z;
+				f >> r >> g >> b;
+
+				int colorId = -1;
+
+				if (r == 0 && g == 0 && b == 0) colorId = 0;  // mouth
+				if (r == 255 && g == 255 && b == 0) colorId = 1;  // chin
+				if (r == 255 && g == 0 && b == 255) colorId = 2;  // nose
+				if (r == 0 && g == 255 && b == 255) colorId = 3;  // left eye
+				if (r == 0 && g == 255 && b == 0) colorId = 4;  // left chick
+				if (r == 0 && g == 0 && b == 255) colorId = 5;  // right chick
+				if (r == 255 && g == 0 && b == 0) colorId = 6;  // right eye
+
+				segments[i] = colorId;
+				isSelected[i] = colorId != -1;
+
+			}
+			f.close();
+			for (int i = 0; i < initialFace->verts.size(); i++){
+
+				int partId;
+				int cid = segments[i];
+				if (cid == -1)
+					continue;
+
+
+				if (cid == 0) partId = 0;
+				if (cid == 1) partId = 6;
+				if (cid == 2) partId = 1;
+				if (cid == 3) partId = 2;
+				if (cid == 4) partId = 4;
+				if (cid == 5) partId = 5;
+				if (cid == 6) partId = 3;
+
+				innerPoints[partId].push_back(i);
+
+				
+			}
+
+
+			//renderer->RemoveActor(renderer->GetActors()->GetLastActor());
+			Mesh *m = new Mesh();
+			vector<vector<int>> inputFaceParts;
+			ifstream of("inputPoints.xyz");
+			for (int fp = 0; fp < faceParts.size(); fp++){
+				
+				vector<int> facePart;
+				for (int p = 0; p < faceParts[fp].size(); p++){
+
+					float x, y, z;
+					of >> x >> y >> z;
+					float* coords = new float[3];
+					coords[0] = x;
+					coords[1] = y;
+					coords[2] = z;
+					int vid = m->addVertex(coords);
+					facePart.push_back(vid);
+					
+
+				}
+				inputFaceParts.push_back(facePart);
+			}
+
+			of.close();
+
 		
+			vector<int**> inputHist;
+			inputHist = extractContourFeatures(m, inputFaceParts);
+			/*
+			ofstream hf("faces\\InputContourFeatures.txt");
+
+			hf << partHists.size() << " " << NUM_CONTOUR_POINTS << " " << 80 << endl;
+
+			for (int h = 0; h < partHists.size(); h++){
+
+				for (int p = 0; p < NUM_CONTOUR_POINTS; p++){
+
+					for (int q = 0; q < 80; q++)
+						hf << partHists[h][p][q] << " ";
+
+					hf << endl;
+
+				}
+			}
+			hf.close();
+			*/
+			int numParts = faceParts.size();
+			int* bestMatches = new int[numParts];
+			float* minDists = new float[numParts];
+			for (int i = 0; i < numParts; i++)
+				minDists[i] = 999999999;
+
+			for (int fn = 2; fn < 1000; fn++){
+
+				vector<int**> faceHist;
+				int numParts, numHists, lenHists;
+
+				ifstream f("faces\\contourFeatures" + to_string(fn) + ".txt");
+
+				f >> numParts >> numHists >> lenHists;
+
+				for (int i = 0; i < numParts; i++){
+
+					int** hist = new int*[numHists];
+					for (int j = 0; j < numHists; j++){
+
+						hist[j] = new int[lenHists];
+						for (int k = 0; k < lenHists; k++){
+
+							int temp;
+							f >> temp;
+							hist[j][k] = temp;
+
+						}
+					}
+
+					faceHist.push_back(hist);
+				}
+
+				f.close();
+
+				for (int part = 0; part < numParts; part++){
+
+					float dist = matchContour(faceHist[part], inputHist[part]);
+
+					if (dist < minDists[part]){
+						minDists[part] = dist;
+						bestMatches[part] = fn;
+
+					}
+
+				}
+
+				for (int i = 0; i < numParts; i++){
+					for (int j = 0; j < numHists; j++)
+						delete faceHist[i][j];
+					delete faceHist[i];
+				}
+
+			}
+
+			Mesh* outFace = new Mesh();
+			outFace->loadOff("faces\\baseface.off");
+
+			for (int i = 0; i < faceParts.size(); i++){
+
+				cout << bestMatches[i] << " " << minDists[i] << endl;
+				
+				int fid = bestMatches[i];
+
+				Mesh* tempMesh = new Mesh();
+				tempMesh->loadOff((char*)("faces\\face" + to_string(fid) + ".off").c_str());
+
+				vector<int> vList = innerPoints[i];
+
+				for (int v = 0; v < vList.size(); v++){
+
+					int vid = vList[v];
+
+					outFace->verts[vid]->coords[0] = tempMesh->verts[vid]->coords[0];
+					outFace->verts[vid]->coords[1] = tempMesh->verts[vid]->coords[1];
+					outFace->verts[vid]->coords[2] = tempMesh->verts[vid]->coords[2];
+				}
+
+				
+				
+				/*tempMesh->shiftMesh(250000,0);
+				
+				vtkPolyData* tempPoly = tempMesh->getVTKPolyDataSubsetByVertices(innerPoints[i], 360 );
+				vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+				mapper->SetInputData(tempPoly);
+				mapper->SetScalarRange(0, 360);
+
+				vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+				actor->SetMapper(mapper);
+				actor->GetProperty()->SetPointSize(5);
+
+				renderer->AddActor(actor);
+				renderer->Modified();*/
+				
+				
+
+			}
+
+			outFace->shiftMesh(250000, 0);
+			
+			vector<int> innerPoints2;
+
+			for (int ii = 0; ii < innerPoints.size(); ii++){
+
+				for (int jj = 0; jj < innerPoints[ii].size(); jj++){
+
+					innerPoints2.push_back(innerPoints[ii][jj]);
+
+
+				}
+
+			}
+
+			/*for (int i = 0; i < faceParts.size(); i++){
+			
+				vtkPolyData* tempPoly = outFace->getVTKPolyDataSubsetByVertices(innerPoints[i], 360);
+				vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+				mapper->SetInputData(tempPoly);
+				mapper->SetScalarRange(0, 360);
+
+				vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+				actor->SetMapper(mapper);
+				actor->GetProperty()->SetPointSize(5);
+
+				renderer->AddActor(actor);
+				renderer->Modified();
+
+			}*/
+
+			
+			vtkPolyData* tempPoly = outFace->getVTKPolyDataSubsetByVertices(innerPoints2, 360);
+			
+			vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+			mapper->SetInputData(tempPoly);
+			mapper->SetScalarRange(0, 360);
+
+			vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+			actor->SetMapper(mapper);
+			actor->GetProperty()->SetPointSize(5);
+
+			renderer->AddActor(actor);
+			renderer->Modified();
+			
+			/*
+			vtkPolyData* points = m->getVTKPolyData(false);
+			vtkDataArray * s = points->GetPointData()->GetScalars();
+			
+			int vid = 0;
+			for (int fp = 0; fp < inputFaceParts.size();fp++)
+			for (int p = 0; p < inputFaceParts[fp].size(); p++)
+				s->SetTuple1(vid++, 10 + 50 * fp);
+
+			vtkSmartPointer<vtkPolyDataMapper> mapper2 = vtkSmartPointer<vtkPolyDataMapper>::New();
+			mapper2->SetInputData(points);
+			mapper2->SetScalarRange(0, 360);
+
+			vtkSmartPointer<vtkActor> actor2 = vtkSmartPointer<vtkActor>::New();
+			actor2->SetMapper(mapper2);
+			actor2->GetProperty()->SetPointSize(5);
+
+			renderer->AddActor(actor2);
+			renderer->Modified();
+			*/
+			this->GetInteractor()->GetRenderWindow()->Render();
+			
+
+			
+		}
+
+		if (key == "v"){
+
+			
+			
+			Mesh* testFace;
+
+			for (int tf = 1; tf < 2; tf++){
+				const clock_t begin_time = clock();
+				std::cout << tf << std::endl;
+				testFace = new Mesh();
+
+				int testFaceId = tf; // tf;// rand() % 100;
+				testFace->loadOff((char*)("faces\\testface" + to_string(testFaceId) + ".off").c_str());
+			
+				createInputFile(testFace, faceParts);
+
+				
+				vector<vector<int>> innerPoints = { {}, {}, {}, {}, {}, {}, {} };
+				int colors[53490];
+				std::ifstream f("faces\\segmented.xyz");
+
+				for (int i = 0; i < 53490; i++){
+
+					float x, y, z;
+					int   r, g, b;
+					f >> x >> y >> z;
+					f >> r >> g >> b;
+
+					int colorId = -1;
+
+					if (r == 0 && g == 0 && b == 0) colorId = 0;  // mouth
+					if (r == 255 && g == 255 && b == 0) colorId = 1;  // chin
+					if (r == 255 && g == 0 && b == 255) colorId = 2;  // nose
+					if (r == 0 && g == 255 && b == 255) colorId = 3;  // left eye
+					if (r == 0 && g == 255 && b == 0) colorId = 4;  // left chick
+					if (r == 0 && g == 0 && b == 255) colorId = 5;  // right chick
+					if (r == 255 && g == 0 && b == 0) colorId = 6;  // right eye
+
+					colors[i] = colorId;
+					
+
+				}
+				f.close();
+
+				for (int i = 0; i < 53490; i++){
+
+					int partId;
+					int cid = colors[i];
+					if (cid == -1)
+						continue;
+
+
+					if (cid == 0) partId = 0;
+					if (cid == 1) partId = 6;
+					if (cid == 2) partId = 1;
+					if (cid == 3) partId = 2;
+					if (cid == 4) partId = 4;
+					if (cid == 5) partId = 5;
+					if (cid == 6) partId = 3;
+
+					innerPoints[partId].push_back(i);
+
+
+				}
+
+				
+				//renderer->RemoveActor(renderer->GetActors()->GetLastActor());
+				Mesh *m = new Mesh();
+				vector<vector<int>> inputFaceParts;
+				ifstream of("inputPoints.xyz");
+				for (int fp = 0; fp < faceParts.size(); fp++){
+
+					vector<int> facePart;
+					for (int p = 0; p < faceParts[fp].size(); p++){
+
+						float x, y, z;
+						of >> x >> y >> z;
+						float* coords = new float[3];
+						coords[0] = x;
+						coords[1] = y;
+						coords[2] = z;
+						int vid = m->addVertex(coords);
+						facePart.push_back(vid);
+
+
+					}
+					inputFaceParts.push_back(facePart);
+				}
+
+				of.close();
+
+
+				vector<int**> inputHist;
+				inputHist = extractContourFeatures(m, inputFaceParts);
+
+
+				ofstream hf("faces\\contourFeatures_input" + to_string(testFaceId) + ".txt");
+
+				hf << inputHist.size() << " " << NUM_CONTOUR_POINTS << " " << 80 << endl;
+
+				for (int h = 0; h < inputHist.size(); h++){
+
+					for (int p = 0; p < NUM_CONTOUR_POINTS; p++){
+
+						for (int q = 0; q < 80; q++)
+							hf << inputHist[h][p][q] << " ";
+
+						hf << endl;
+
+					}
+				}
+				hf.close();
+
+				int numParts = faceParts.size();
+				int* bestMatches = new int[numParts];
+				float* minDists = new float[numParts];
+				for (int i = 0; i < numParts; i++)
+					minDists[i] = 999999999;
+				int numHists;
+				
+
+				for (int fn = 1; fn < 5000; fn++){
+
+					vector<int**> faceHist;
+					int numParts, numHists, lenHists;
+
+					ifstream f("faces\\contourFeatures" + to_string(fn) + ".txt");
+
+					f >> numParts >> numHists >> lenHists;
+
+					for (int i = 0; i < numParts; i++){
+
+						int** hist = new int*[numHists];
+						for (int j = 0; j < numHists; j++){
+
+							hist[j] = new int[lenHists];
+							for (int k = 0; k < lenHists; k++){
+
+								int temp;
+								f >> temp;
+								hist[j][k] = temp;
+
+							}
+						}
+
+						faceHist.push_back(hist);
+					}
+
+					f.close();
+
+					for (int part = 0; part < numParts; part++){
+
+						float dist = matchContour(faceHist[part], inputHist[part]);
+
+						if (dist < minDists[part]){
+							minDists[part] = dist;
+							bestMatches[part] = fn;
+
+						}
+
+					}
+
+					for (int i = 0; i < numParts; i++){
+						for (int j = 0; j < numHists; j++)
+							delete faceHist[i][j];
+						delete faceHist[i];
+					}
+
+				}
+
+				
+				Mesh* outFace = new Mesh();
+				Mesh* outFace2 = new Mesh();
+				outFace->loadOff("faces\\baseface.off");
+				outFace2->loadOff("faces\\baseface.off");
+
+				vector<Mesh*> bestMatchFaces;
+
+				for (int i = 0; i < faceParts.size(); i++){
+
+					cout << bestMatches[i] << " " << minDists[i] << endl;
+
+					int fid = bestMatches[i];
+
+					Mesh* tempMesh = new Mesh();
+					tempMesh->loadOff((char*)("faces\\face" + to_string(fid) + ".off").c_str());
+
+					bestMatchFaces.push_back(tempMesh);
+
+					
+
+				}
+
+
+				
+				for (int i = 0; i < faceParts.size(); i++){
+
+
+					float xd = 0;
+					float yd = 0;
+					float zd = 0;
+
+					
+					vector<int> vList = innerPoints[i];
+
+					for (int v = 0; v < vList.size(); v++){
+
+						int vid = vList[v];
+
+						//bestMatchFaces[i]->verts[vid]->coords[0] += 0.999*xd;
+						//bestMatchFaces[i]->verts[vid]->coords[1] += 0.999*yd;
+						//bestMatchFaces[i]->verts[vid]->coords[2] += 0.999*zd;
+
+						outFace->verts[vid]->coords[0] = bestMatchFaces[i]->verts[vid]->coords[0];
+						outFace->verts[vid]->coords[1] = bestMatchFaces[i]->verts[vid]->coords[1];
+						outFace->verts[vid]->coords[2] = bestMatchFaces[i]->verts[vid]->coords[2];
+					}
+
+				}
+
+				
+				
+
+				vector<int> innerPoints2;
+				for (int ii = 0; ii < innerPoints.size(); ii++)
+				for (int jj = 0; jj < innerPoints[ii].size(); jj++)
+					innerPoints2.push_back(innerPoints[ii][jj]);
+
+				vector<int> vertList;
+				for (int ii = 0; ii < faceParts.size(); ii++)
+				for (int jj = 0; jj < faceParts[ii].size(); jj++)
+					vertList.push_back(faceParts[ii][jj]);
+
+				outFace2->initialize();
+				outFace2->deform(outFace, 10000, 5, innerPoints2);
+				outFace2->shiftMesh(250000,0);
+				outFace2->write((char*)("faces\\testface" + to_string(testFaceId) + "_out.off").c_str());
+
+
+				//outFace->shiftMesh(250000,0);
+				//outFace->write((char*)("faces\\testface" + to_string(testFaceId) + "_out2.off").c_str());
+
+				
+
+				//Mesh* partsOnly = outFace->getSubsetByVertices(innerPoints2);
+				//partsOnly->write((char*)("faces\\testface" + to_string(testFaceId) + "_out2.off").c_str());
+				std::cout << float(clock() - begin_time) / CLOCKS_PER_SEC << "  secs\n\n";
+
+				/*
+				outFace->shiftMesh(250000, 250000*(tf-1));
+				vector<int> innerPoints2;
+
+				for (int ii = 0; ii < innerPoints.size(); ii++)
+					for (int jj = 0; jj < innerPoints[ii].size(); jj++)
+						innerPoints2.push_back(innerPoints[ii][jj]);
+					
+
+				vtkPolyData* outPoly = outFace->getVTKPolyDataSubsetByVertices(innerPoints2, 360);
+
+				vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+				mapper->SetInputData(outPoly);
+				mapper->SetScalarRange(0, 360);
+
+				vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+				actor->SetMapper(mapper);
+				actor->GetProperty()->SetPointSize(5);
+
+				renderer->AddActor(actor);
+
+				testFace->shiftMesh(0, 250000 * (tf - 1));
+				vtkPolyData* inPoly = testFace->getVTKPolyDataSubsetByVertices(innerPoints2, 360);
+				
+				vtkSmartPointer<vtkPolyDataMapper> mapper2 = vtkSmartPointer<vtkPolyDataMapper>::New();
+				mapper2->SetInputData(inPoly);
+				mapper2->SetScalarRange(0, 360);
+
+				vtkSmartPointer<vtkActor> actor2 = vtkSmartPointer<vtkActor>::New();
+				actor2->SetMapper(mapper2);
+				actor2->GetProperty()->SetPointSize(5);
+
+				renderer->AddActor(actor2);
+
+				renderer->Modified();
+				*/
+				for (int i = 0; i < numParts; i++){
+					for (int j = 0; j < numHists; j++)
+						delete inputHist[i][j];
+					delete inputHist[i];
+				}
+				for (int i = 0; i < bestMatchFaces.size(); i++)
+					delete bestMatchFaces[i];
+				delete testFace;
+				delete outFace;
+				delete outFace2;
+				delete m;
+				delete minDists;
+				//delete partsOnly;
+				delete bestMatches;
+				this->GetInteractor()->GetRenderWindow()->Render();
+
+
+			}
+
+
+		}
 		// Forward events
 		vtkInteractorStyleTrackballCamera::OnKeyPress();
 	}
@@ -1418,25 +2884,879 @@ private:
 vtkStandardNewMacro(HighlightInteractorStyle);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////CONTOUR FEATURES///////////////////////////////////////////////////////////
 
-void fill(vector<Vertex*> verts){
+vector<vector<int>> completeContoursByGeodesic(Mesh* cF, vector<vector<int>> inFaceParts){
+
+	vector<vector<int>> outCompletedFaceParts;
+
+	//Mesh* cF = new Mesh();
+	//cF->loadOff("faces\\face2.off");
+
+	float maxGeoDist = 0;
+	Dijsktra::DijsktraSP dsp;
+	dsp.setMesh(cF);
+
+
+	for (int fp = 0; fp < inFaceParts.size(); fp++){
+
+		vector<int> completedPart;
+		for (int i = 0; i < inFaceParts[fp].size() - 1; i++){
+
+
+			int curr = inFaceParts[fp][i];
+			int next = inFaceParts[fp][i + 1];
+
+			std::vector<Dijsktra::Node*> dists = dsp.run(curr);
+
+			Dijsktra::Node* result = dists[next]->pred;
+
+
+			//std::cout << "from " << curr << " to " << next << ":\n";
+
+			while (result){
+
+				//std::cout << result->data << " ";
+				completedPart.push_back(result->data);
+				result = result->pred;
+
+			}
+
+			//std::cout << "\n----------------------------------\n";
+
+			for (int j = 0; j < dists.size(); j++)
+				delete dists[j];
+
+		}
+
+		outCompletedFaceParts.push_back(completedPart);
+
+	}
+
+
+
+	return outCompletedFaceParts;
+
+
+}
+
+vector<vector<int>> findInnerContourVertices(Mesh* cF, vector<vector<int>> inFaceParts){
+
+	vector<vector<int>> innerPoints;
+
+	vector<vector<Edge*>> facePartConturEdges;
+
+	for (int i = 0; i < inFaceParts.size(); i++){
+
+		vector<Edge*> conturEdges;
+		for (int p = 0; p < inFaceParts[i].size() - 1; p++){
+
+			int curr = inFaceParts[i][p];
+			int next = inFaceParts[i][p + 1];
+
+			vector<int> edges = cF->verts[curr]->edgeList;
+
+			for (int e = 0; e < edges.size(); e++){
+
+				int eid = edges[e];
+				if ((cF->edges[eid]->v1i == next) || (cF->edges[eid]->v2i == next)) {
+
+					conturEdges.push_back(cF->edges[eid]);
+					break;
+
+
+				}
+			}
+
+		}
+
+		facePartConturEdges.push_back(conturEdges);
+
+	}
+
+
+	vector<vector<int>> edge2Tri;
+
+
+	for (int i = 0; i < cF->edges.size(); i++){
+
+		//edgeVisited.push_back(false);
+
+		int v1 = cF->edges[i]->v1i;
+		int v2 = cF->edges[i]->v2i;
+
+		vector<int> commonTris;
+		vector<int> v1Tris = cF->verts[v1]->triList;
+		vector<int> v2Tris = cF->verts[v2]->triList;
+
+		for (int t1 = 0; t1 < v1Tris.size(); t1++){
+
+			for (int t2 = 0; t2 < v2Tris.size(); t2++){
+				if (v1Tris[t1] == v2Tris[t2])
+					commonTris.push_back(v1Tris[t1]);
+			}
+		}
+
+		edge2Tri.push_back(commonTris);
+	}
+
+
+	for (int fp = 0; fp < faceParts.size(); fp++){
+		vector<int> tempInnerPoints;
+		std::cout << "---------------------" << std::endl;
+		std::cout << fp << std::endl;
+		
+		
+		bool* edgeVisited = new bool[cF->edges.size()];
+		
+		for (int jj = 0; jj < cF->edges.size(); jj++)
+			edgeVisited[jj] = false;
+
+		std::queue<Edge*> eq;
+		edgeVisited[facePartConturEdges[fp][0]->idx] = true;
+
+
+
+		int triId0 = edge2Tri[facePartConturEdges[fp][0]->idx][0];
+		int triId1 = edge2Tri[facePartConturEdges[fp][0]->idx][1];
+		int v0 = cF->tris[triId0]->v1i + cF->tris[triId0]->v2i + cF->tris[triId0]->v3i - facePartConturEdges[fp][0]->v1i - facePartConturEdges[fp][0]->v2i;
+		int v1 = cF->tris[triId1]->v1i + cF->tris[triId1]->v2i + cF->tris[triId1]->v3i - facePartConturEdges[fp][0]->v1i - facePartConturEdges[fp][0]->v2i;
+
+		float d0 = 0;
+		float d1 = 0;
+		cout << "dijsktra" << endl;
+		Dijsktra::DijsktraSP dsp2;
+		dsp2.setMesh(cF);
+		std::vector<Dijsktra::Node*> dists0 = dsp2.run(v0);
+		std::vector<Dijsktra::Node*> dists1 = dsp2.run(v1);
+		cout << "dijsktra1" << endl;
+		for (int i = 0; i < inFaceParts[fp].size(); i++){
+
+			if (d0 < dists0[inFaceParts[fp][i]]->key)
+				d0 = dists0[inFaceParts[fp][i]]->key;
+
+			if (d1 < dists1[inFaceParts[fp][i]]->key)
+				d1 = dists1[inFaceParts[fp][i]]->key;
+		}
+		cout << "dijsktra2" << endl;
+		int triId = (d0 > d1 ? triId1 : triId0);
+		std::cout << triId << std::endl;
+		int e1 = cF->tris[triId]->e1;
+		int e2 = cF->tris[triId]->e2;
+		int e3 = cF->tris[triId]->e3;
 
 
 
 
+		bool isContur1 = false;
+		bool isContur2 = false;
+		bool isContur3 = false;
+
+		for (int i = 0; i < facePartConturEdges[fp].size(); i++){
+
+			//std::cout << conturEdges[i]->idx << std::endl;
+
+			if (facePartConturEdges[fp][i]->idx == e1)
+				isContur1 = true;
+
+			if (facePartConturEdges[fp][i]->idx == e2)
+				isContur2 = true;
+
+			if (facePartConturEdges[fp][i]->idx == e3)
+				isContur3 = true;
+		}
+
+		if (!edgeVisited[e1] && !isContur1)
+			eq.push(cF->edges[e1]);
+
+		if (!edgeVisited[e2] && !isContur2)
+			eq.push(cF->edges[e2]);
+
+		if (!edgeVisited[e3] && !isContur3)
+			eq.push(cF->edges[e3]);
 
 
 
+		int ttt = 0;
+		while (!eq.empty()){
+			//std::cout << "------------" << std::endl;
+			//std::cout << "0" << std::endl;
+			int count = 0;
+			Edge* ed = eq.front();
+			eq.pop();
 
 
+			if (edgeVisited[ed->idx])
+				continue;
+			ttt++;
+			//s->SetTuple1(ed->v1i, 10 + fp * 50); s->SetTuple1(ed->v2i, 10 + fp * 50);
+
+			if (find(tempInnerPoints.begin(), tempInnerPoints.end(), ed->v1i) == tempInnerPoints.end())
+				tempInnerPoints.push_back(ed->v1i);
+
+			if (find(tempInnerPoints.begin(), tempInnerPoints.end(), ed->v2i) == tempInnerPoints.end())
+				tempInnerPoints.push_back(ed->v2i);
+
+			edgeVisited[ed->idx] = true;
+			//std::cout << "1" << std::endl;
+			for (int tt = 0; tt < edge2Tri[ed->idx].size(); tt++){
+
+				int triId = edge2Tri[ed->idx][tt];
+
+				int e1 = cF->tris[triId]->e1;
+				int e2 = cF->tris[triId]->e2;
+				int e3 = cF->tris[triId]->e3;
+
+				if (!edgeVisited[e1]){
+
+					bool t1 = false;
+					bool t2 = false;
+					for (int p = 0; p < inFaceParts[fp].size(); p++){
+
+						if (inFaceParts[fp][p] == cF->edges[e1]->v1i)
+							t1 = true;
+
+						if (inFaceParts[fp][p] == cF->edges[e1]->v2i)
+							t2 = true;
+
+					}
+
+					if (!(t1&&t2))
+						eq.push(cF->edges[e1]);
+
+				}
+				if (!edgeVisited[e2]){
+
+					bool t1 = false;
+					bool t2 = false;
+					for (int p = 0; p < inFaceParts[fp].size(); p++){
+
+						if (inFaceParts[fp][p] == cF->edges[e2]->v1i)
+							t1 = true;
+
+						if (inFaceParts[fp][p] == cF->edges[e2]->v2i)
+							t2 = true;
+
+					}
+
+					if (!(t1&&t2))
+						eq.push(cF->edges[e2]);
+
+				}
+				if (!edgeVisited[e3]){
+
+					bool t1 = false;
+					bool t2 = false;
+					for (int p = 0; p < inFaceParts[fp].size(); p++){
+
+						if (inFaceParts[fp][p] == cF->edges[e3]->v1i)
+							t1 = true;
+
+						if (inFaceParts[fp][p] == cF->edges[e3]->v2i)
+							t2 = true;
+
+					}
+					if (!(t1&&t2))
+						eq.push(cF->edges[e3]);
+
+				}
 
 
+			}
+
+			//std::cout << "2" << std::endl;
+			delete ed;
+
+
+		}
+
+		innerPoints.push_back(tempInnerPoints);
+		std::cout << "done" << std::endl;
+	
+
+	}
+
+	return innerPoints;
 
 
 
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+vector<Vertex*> completeContour(vector<Vertex*> contourPoints){
+
+	vector<float> dists;
+	for (int j = 1; j < contourPoints.size(); j++){
+
+		float dist = sqrt(dist2Between(contourPoints[j - 1]->coords, contourPoints[j]->coords));
+		//cout << dist << endl;
+		dists.push_back(dist);
+	}
+
+	
+	int n = NUM_CONTOUR_POINTS - contourPoints.size();
+	
+	
+	for (int i = 0; i < n; i++){
+
+		float maxDist = 0;
+		int maxj = 0;
+		for (int j = 0; j < contourPoints.size()-1; j++){
+
+			if (dists[j] > maxDist ){
+
+				maxj = j;
+				maxDist = dists[j];
+
+			}
+		}
+
+		int curr = maxj;
+		int prev = curr - 1;
+
+		float* newCoords = new float[3];
+
+		newCoords[0] = (contourPoints[curr]->coords[0] + contourPoints[curr + 1]->coords[0]) / 2;
+		newCoords[1] = (contourPoints[curr]->coords[1] + contourPoints[curr + 1]->coords[1]) / 2;
+		newCoords[2] = (contourPoints[curr]->coords[2] + contourPoints[curr + 1]->coords[2]) / 2;
+
+		Vertex* v = new Vertex(-i, newCoords);
+		//delete newCoords;
+		//contourPoints.push_back(v);
+		contourPoints.insert(contourPoints.begin() + curr+1, v);
+		float dist1 = sqrt(dist2Between(contourPoints[curr]->coords, contourPoints[curr+1]->coords));
+		float dist2 = sqrt(dist2Between(contourPoints[curr+1]->coords, contourPoints[curr+2]->coords));
+		dists.erase(dists.begin() + curr);
+		dists.insert(dists.begin() + curr, dist1);
+		dists.insert(dists.begin() + curr+1, dist2);
+		//cout << "--------------------------------------------------\n";
+	}
+	
+	return contourPoints;
+}
+
+int* distHist(vector<Vertex*> contourPoints, int index){
+
+	
+	int n = contourPoints.size();
+	float* dists = new float[n];
+	//float* angles = new float[3*n];
+
+	int* hist = new int[20];
+	for (int i = 0; i < 20; i++)
+		hist[i] = 0;
+
+	
+	float mean = 0;
+	for (int i = 0; i < n; i++){
+		dists[i] = sqrt(dist2Between(contourPoints[index]->coords, contourPoints[i]->coords));
+		mean += dists[i];
+		//cout << dists[i] << endl;
+
+	}
+
+	mean /= n;
+
+	for (int i = 0; i < n; i++)
+		dists[i] -= mean;
+
+	
+	float stdDev = 0;
+
+	for (int i = 0; i < n; i++)
+		stdDev += dists[i] * dists[i];
+
+
+	stdDev = sqrt(stdDev / n);
+
+	for (int i = 0; i < n; i++)
+		dists[i] /= stdDev;
+
+	
+	//cout << "------------------------------------------\n";
+	for (int i = 0; i < n; i++){
+		//cout << dists[i] << endl;
+		int ind = dists[i] / 0.2 + 10;
+		if (ind < 0)
+			ind = 0;
+		if (ind>19)
+			ind = 19;
+		hist[ind]++;
+
+	}
+	
+	//cout << "******************************************\n";
+	return hist;
+}
+
+int* angleHist(vector<Vertex*> contourPoints, int index){
+
+	int n = contourPoints.size();
+	float* angles = new float[3 * n];
+
+	int* hist = new int[60];
+	for (int i = 0; i < 60; i++){
+		hist[i] = 0;
+	}
+
+	float meanx = 0;
+	float meany = 0;
+	float meanz = 0;
+
+	for (int i = 0; i < n; i++){
+
+		float dx = contourPoints[index]->coords[0] - contourPoints[i]->coords[0];
+		float dy = contourPoints[index]->coords[1] - contourPoints[i]->coords[1];
+		float dz = contourPoints[index]->coords[2] - contourPoints[i]->coords[2];
+		//cout << dists[i] << endl;
+
+		if (dy == 0)
+			angles[3*i] = M_PI / 2;
+		else
+			angles[3*i] = atan(dx / dy) ;
+
+		if (dz == 0)
+			angles[3*i+1] = M_PI / 2;
+		else
+			angles[3*i + 1] = atan(dy / dz) ;
+
+		if (dx == 0)
+			angles[3*i+2] = M_PI / 2;
+		else
+			angles[3*i + 2] = atan(dz / dx) ;
+
+		//angles[i]   = angles[i]   * 180 / M_PI;
+		//angles[i+1] = angles[i+1] * 180 / M_PI;
+		//angles[i+2] = angles[i+2] * 180 / M_PI;
+
+		meanx += angles[3*i];
+		meany += angles[3*i+1];
+		meanz += angles[3*i+2];
+
+
+
+		//cout << angles[i] << " " << angles[i+1] << " " << angles[i+2] << " ";
+
+	}
+	//cout << endl;
+
+	meanx /= n;
+	meany /= n;
+	meanz /= n;
+
+	for (int i = 0; i < n; i++){
+
+		angles[i] -= meanx;
+		angles[i+1] -= meany;
+		angles[i+2] -= meanz;
+	}
+
+	float hsize = M_PI / 20.;
+
+	for (int i = 0; i < 3*n; i++){
+		//cout << angles[i] << endl;
+		int ind = angles[i] / hsize ;
+		if (ind < 0)
+			ind = 0;
+		if (ind>19)
+			ind = 19;
+
+		int ind2 = i % 3;
+		hist[20*ind2 + ind]++;
+
+	}
+
+	return hist;
+}
+
+vector<int**> extractContourFeatures(Mesh *face, vector<vector<int>> faceParts){
+
+	vector<int**> partHists;
+
+	for (int i = 0; i < faceParts.size(); i++){
+
+
+		vector<Vertex*> contourPoints;
+
+		for (int j = 0; j < faceParts[i].size(); j++){
+
+			contourPoints.push_back(face->verts[faceParts[i][j]]);
+
+		}
+
+		vector<Vertex*> newPoints = completeContour(contourPoints);
+
+		
+
+
+
+		/*******************************************************************************/
+		ofstream f1, f2;
+		f1.open("part" + std::to_string(i) + ".xyz");
+		f2.open("part" + std::to_string(i) + "_added.xyz");
+
+		for (int j = 0; j < contourPoints.size(); j++){
+
+			f1 << contourPoints[j]->coords[0] << " " << contourPoints[j]->coords[1] << " " << contourPoints[j]->coords[2] << endl;
+		}
+
+		for (int j = 0; j < newPoints.size(); j++){
+
+			f2 << newPoints[j]->coords[0] << " " << newPoints[j]->coords[1] << " " << newPoints[j]->coords[2] << endl;
+		}
+
+		f1.close();
+		f2.close();
+		/****************************************************************************/
+
+		int** hists = new int*[NUM_CONTOUR_POINTS];
+
+		for (int j = 0; j < NUM_CONTOUR_POINTS; j++){
+			int* hist = new int[80];
+			int* hist1 = distHist(newPoints, j);
+			int* hist2 = angleHist(newPoints, j);
+
+
+			for (int h = 0; h < 20; h++)
+				hist[h] = hist1[h];
+			for (int h = 0; h < 60; h++)
+				hist[h+20] = hist2[h];
+			
+
+			//angleHist(newPoints, j);
+			hists[j] = hist;
+		}
+
+		/*
+		for (int j = 0; j < NUM_CONTOUR_POINTS; j++){
+
+			for (int k = 0; k < 80; k++)
+				cout << hists[j][k] << " ";
+
+			cout << endl;
+		}
+		cout << "------------------------------------------\n";
+
+		*/
+		partHists.push_back(hists);
+
+		//for (int j = 0; j < contourPoints.size(); j++)
+			//delete contourPoints[i];
+
+
+		//for (int j = 0; j < newPoints.size(); j++)
+			//delete newPoints[i];
+	}
+
+	return partHists;
+}
+
+float distContourFeatures(int* f1, int* f2){
+
+	float cost = 0;
+
+	for (int k = 0; k < 80; k++)
+		cost += (f1[k] - f2[k]) * (f1[k] - f2[k]);
+
+	cost = sqrt(cost);
+	cost /= 80;
+	return cost;
+}
+
+float findClosestPointCost(int* pHist , int** hists){
+
+	float bestCost=999999999999;
+	float besti=-1;
+	for (int i = 0; i < NUM_CONTOUR_POINTS; i++){
+
+		float cost = distContourFeatures(pHist, hists[i]);
+
+		if (cost < bestCost){
+
+			bestCost = cost;
+			besti = i;
+		}
+
+	}
+
+	return bestCost;
+}
+
+float matchContour(int** hist1, int** hist2){
+
+	float cost = 0;
+	for (int i = 0; i < NUM_CONTOUR_POINTS; i++){
+	
+		cost += findClosestPointCost(hist1[i], hist2);
+	}
+
+	cost /= NUM_CONTOUR_POINTS;
+
+	return cost;
+
+}
+
+float matchFaceParts(vector<int**> f1, vector<int**> f2){
+
+	float cost = 0;
+	for (int i = 0; i < f1.size(); i++)
+		cost += matchContour(f1[i], f2[i]);
+
+	cost /= f1.size();
+
+	return cost;
+
+}
+
+
+////////////////////////////////////////graph-based features///////////////////////////////////////////////////////
+
+vector<pair<float, int>> findClosestOut(graph::Vertex* v, Vector* target){
+
+	vector<pair<float, int>> outs;
+	float min = 999.;
+	int minj = -1;
+	for (int j = 0; j < v->outs.size(); j+=2){
+
+		
+
+		float diff = v->outs[j]->v->calculateAngleBetween(*(target));
+
+		if (diff < min){
+
+			min = diff;
+			minj = j;
+		}
+
+		outs.push_back(make_pair(diff, j));
+
+	}
+
+	//cout<<outs.size()<<endl;
+	//getchar();
+	return outs;
+
+
+}
+
+void startSearchFrom(graph::Vertex*  v, vector<Vector*> path, vector<graph::Edge*> &candidates, float &cost, int depth , graph::Edge* last){
+
+	//cout<<"		" <<depth << endl;
+	
+	//cout << "-------------------------" << std::endl;
+	if (path.size() == 0)
+		return;
+
+	float min = 999.;
+	int minj = -1;
+	vector<pair<float, int>> closestOut = findClosestOut(v, path[0]);
+	vector<graph::Edge*> mincandidates;
+	float minCost = 99999.;
+	int mini = -1;
+
+	//std::cout << closestOut.size() << std::endl;
+	//getchar();
+
+	/*cout << v->id <<"	:	"<< endl;
+	for (int i = 0; i < closestOut.size(); i++){
+
+
+		cout << v->outs[closestOut[i].second]->to->id << endl;
+	}
+	getchar();
+	*/
+	
+	for (int i = 0; i < closestOut.size(); i++){
+
+		int thresh1 = 10;
+		int thresh2 = 15;
+
+		//std::cout << "		" << i << std::endl;
+		min = closestOut[i].first;
+		minj = closestOut[i].second;
+
+
+		vector<Vector*> temppath;
+		vector<graph::Edge*> tempcandidates; 
+		
+
+		
+		for (int j = 1; j < path.size(); j++){
+		
+			Vector* vv = new Vector(path[j]->X, path[j]->Y, path[j]->Z);
+			temppath.push_back(vv);
+		}
+
+		if (temppath.size() == 0){
+			
+			
+			//cout << "fucking end" << endl;
+			//getchar();
+			return;
+		}
+
+		if (min <= thresh1 && v->outs[minj]->to->id != v->id){
+
+			//candidates.push_back(v->outs[minj]);
+			//cost += min;
+			//path.erase(path.begin());
+
+			/*for (int d = 0; d < depth+1; d++)
+				cout << " ";
+			cout << v->outs[minj]->to->id << endl;*/
+		
+			float tempcost = 0;
+			startSearchFrom(v->outs[minj]->to, temppath, tempcandidates, tempcost, depth + 1, v->outs[minj]);
+
+			if (tempcost < minCost){
+
+				mini = i;
+				minCost = tempcost;
+				mincandidates.clear();
+				for (int c = 0; c < tempcandidates.size();c++)
+					mincandidates.push_back( tempcandidates[c]);
+			}
+		}
+
+		
+		for (int j = 0; j < temppath.size(); j++)
+			delete temppath[j];
+		temppath.clear();
+
+		if (min > thresh1 && v->outs[minj]->to->id != v->id && last){
+
+			 float angle = v->outs[minj]->v->calculateAngleBetween(*(last->v));
+
+			 if (angle < thresh2){
+
+				 for (int j = 0; j < path.size(); j++){
+
+					 Vector* vv = new Vector(path[j]->X, path[j]->Y, path[j]->Z);
+					 temppath.push_back(vv);
+				 }
+
+				 float tempcost = 0;
+				 tempcandidates.clear();
+				 startSearchFrom(v->outs[minj]->to, temppath, tempcandidates, tempcost, depth, v->outs[minj]);
+
+				 if (tempcost < minCost){
+
+					 mini = i;
+					 minCost = tempcost;
+					 mincandidates.clear();
+					 for (int c = 0; c < tempcandidates.size(); c++)
+						 mincandidates.push_back(tempcandidates[c]);
+				 }
+
+				 for (int j = 0; j < temppath.size(); j++)
+					 delete temppath[j];
+				 temppath.clear();
+			 }
+
+		}
+		 
+		
+
+
+
+		/*else{
+
+			if (candidates.size()){
+
+				graph::Edge* last = candidates[candidates.size() - 1];
+				//pair<float, int> closestOut = findClosestOut(v->outs[minj]->to, path[0]);
+
+				//float diff = closestOut.first;
+
+
+				float diff = v->outs[minj]->v->calculateAngleBetween(*(last->v));
+
+
+
+				//cout << diff << endl;
+				if (diff < 10){
+
+					//candidates.push_back(v->outs[minj]);
+
+					for (int can = 0; can < candidates.size(); can++)
+						std::cout << candidates[can]->from->id << " ";
+
+					std::cout << std::endl;
+
+					for (int can = 0; can < candidates.size(); can++)
+						std::cout << input->verts[candidates[can]->from->id]->coords[0] << " " << input->verts[candidates[can]->from->id]->coords[1] << " " << input->verts[candidates[can]->from->id]->coords[2] << endl;
+
+
+
+
+
+					//std::cout << "diff:  " << diff << std::endl;
+
+					//last->v->printVector();
+					//v->outs[minj]->v->printVector();
+					//std::cout << "*************************" << std::endl;
+
+					startSearchFrom(v->outs[minj]->to, path, candidates, cost);
+
+
+				}
+
+				else{
+
+					std::cout << input->verts[v->outs[minj]->from->id]->coords[0] << " " << input->verts[v->outs[minj]->from->id]->coords[1] << " " << input->verts[v->outs[minj]->from->id]->coords[2] << endl;
+
+					std::cout << "end -->" << " " << diff << std::endl;
+					std::cout << last->from->id << " " << last->to->id << " " << v->outs[minj]->from->id << " " << v->outs[minj]->to->id << std::endl;
+					cost = 99999.;
+
+				}
+
+			}
+
+			else
+				cost = 99999.;
+		}*/
+
+	}
+
+	if (mini != -1){
+		candidates.push_back(v->outs[mini]);
+		//cout << "added\n";
+
+		for (int i = 0; i < mincandidates.size(); i++)
+			candidates.push_back(mincandidates[i]);
+
+		cost += closestOut[mini].first;
+
+	}
+	//cost += minCost;
+
+	//cout << "cost updated to: " << cost << endl;
+}
+
+void search(vector<graph::Vertex*> verts, vector<Vector*> path, vector<vector<graph::Edge*>> &allCandidates, vector<float> &costs){
+
+
+
+	for (unsigned int i = 0; i <verts.size(); i++){
+		//std::cout << i << endl;
+		vector<graph::Edge*> candidates;
+		float cost = 0.;
+
+		graph::Vertex* v = verts[i];
+
+		startSearchFrom(v, path, candidates, cost,0,NULL);
+
+		if (candidates.size()){
+			allCandidates.push_back(candidates);
+			costs.push_back(cost);
+		}
+
+	}
+
+	
+}
+
+///////////////////////////////////////////// some show bussines////////////////////////////////////////////////////////////////
 vtkSmartPointer<vtkActor> getVectorActor(double* v, double* startPoint,double* color){
 
 
@@ -1486,8 +3806,6 @@ vtkSmartPointer<vtkActor> getVectorActor(double* v, double* startPoint,double* c
 
 }
 
-
-
 void showPCA(vtkSmartPointer<vtkRenderer> renderer, Mesh* mesh, double* startPoint){
 
 	Vector com1(0, 0, 0);
@@ -1530,7 +3848,7 @@ void showPCA(vtkSmartPointer<vtkRenderer> renderer, Mesh* mesh, double* startPoi
 	renderer->AddActor(getVectorActor(principalAxes2[i], startPoint,colors[i]));
 }
 
-
+////////////////////////////////// segmentation evaluation ///////////////////////////////////////////
 
 pair<float,float> HammingDistance(Mesh* mesh1, vector<int> segments1, vector<int> segments2){
 
@@ -1631,7 +3949,6 @@ pair<float,float> HammingDistance(Mesh* mesh1, vector<int> segments1, vector<int
 
 }
 
-
 float randIndex(vector<int> segments1, vector<int> segments2){
 
 	float rand = 0;
@@ -1659,7 +3976,6 @@ float randIndex(vector<int> segments1, vector<int> segments2){
 	return 1 - (rand / totalPairs);
 
 }
-
 
 float localRefError(Mesh* mesh, vector<set<int>> segmentTris1, vector<set<int>> segmentTris2,int faceId) {
 
@@ -1708,7 +4024,6 @@ float localRefError(Mesh* mesh, vector<set<int>> segmentTris1, vector<set<int>> 
 
 
 }
-
 
 pair<float,float> consistencyError(Mesh* mesh, vector<int> segments1, vector<int> segments2){
 
@@ -1793,7 +4108,6 @@ pair<float,float> consistencyError(Mesh* mesh, vector<int> segments1, vector<int
 	return ce;
 
 }
-
 
 Mesh* getOnlySegmented(Mesh* mesh, vector<int> segments, vector<int> &oldIndices){
 
@@ -1966,23 +4280,20 @@ float cutDiscrepancy(Mesh* mesh, vector<int> segments1, vector<int> segments2){
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int main()
 {
-
-
-
-	//std::cout << "give user name" << std::endl;
-	//std::cin >> name;
-	//std::cin >> faceNo;
-	faceNo = 2;
+	srand(time(NULL));
+	faceNo = 3;
 	name = "initial";
 	initialFace = new Mesh();
-
+	/*
 	if (!pointCloudMode)
-		initialFace->loadOff("faces\\face1.off");
+		initialFace->loadOff("faces\\testface3.off");
 	else 
 		initialFace->loadxyz("faces\\face1.xyz");
-
-	 s = initialFace->calculateScale();
+	*/
+	//initialFace->scale(0.001);
+	// s = initialFace->calculateScale();
 	 cube = initialFace->getVTKPolyData(!pointCloudMode);
+	
 	int nVerts = cube->GetPoints()->GetNumberOfPoints();
 
 	
@@ -1994,8 +4305,8 @@ int main()
 
 	}
 
-	initialFace->findNeighborhoodTriangles();
-	initialFace->assignNormalsToTriangles();
+	//initialFace->findNeighborhoodTriangles();
+	//initialFace->assignNormalsToTriangles();
 	//initialFace->calculateDihedrals();
 	//numOfSegs = initialFace->smoothAllNormals(10000);
 	//initialFace->angleXY();
@@ -2006,7 +4317,7 @@ int main()
 
 	for (int i = 0; i < initialFace->verts.size(); i++)
 		s->SetTuple1(i,360);
-
+	
 	cube->GetPointData()->SetScalars(s);
 	cube->GetPointData()->GetScalars()->Modified();
 	

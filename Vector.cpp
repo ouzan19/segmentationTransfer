@@ -97,7 +97,7 @@ float Vector::operator [] (int index){
 
 void Vector::printVector() const //TO BE DELETED
 {
-	cout<<"X: "<<X<<" Y: "<<Y<<" Z: "<<Z;
+	cout<<"X: "<<X<<" Y: "<<Y<<" Z: "<<Z<<endl;
 }
 
 float Vector::Norm() const
@@ -109,8 +109,15 @@ float Vector::Norm() const
 
 float Vector::calculateAngleBetween(Vector & v2){
 
+	float cosx = (dotProduct(v2)) / (Norm() * v2.Norm());
+	if (cosx >= 1)
+		return 0;
+	if (cosx <= -1)
+		return 180;
 
-	return acos((dotProduct(v2)) / (Norm() * v2.Norm())) * 180.0 / 3.14159265; 
+	float angle = acos(cosx) * 180.0 / 3.14159265;
+	return angle;
+	
 
 
 }

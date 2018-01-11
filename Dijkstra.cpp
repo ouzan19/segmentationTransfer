@@ -95,6 +95,8 @@ std::vector<Dijsktra::Node*> DijsktraSP::run(int end){
 
 	for(int j=0;j<edges.size();j++)
 			delete edges[j];
+
+	
 	return vertices;
 	
 }

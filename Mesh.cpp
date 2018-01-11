@@ -2,17 +2,21 @@
 
 #include <vtkPointSource.h>
 #include <vtkSmartPointer.h>
+
+
+
+
 void Mesh::loadOff(char* meshFile)
 {
 	
 	center.setZero();
-	cout << "Mesh initializing (to " << meshFile << ")..\n";
+	//cout << "Mesh initializing (to " << meshFile << ")..\n";
 
 	FILE* fPtr;
 	if (! (fPtr = fopen(meshFile, "r")))
 	{
 		cout << "cannot read " << meshFile << endl;
-		exit(0);
+		return;
 	}
 
 	char off[25];
@@ -33,9 +37,9 @@ void Mesh::loadOff(char* meshFile)
 		coords[1] = b;
 		coords[2] = c;
 
-		center.x() += a;
-		center.y() += b;
-		center.z() += c;
+		//center.x() += a;
+		//center.y() += b;
+		//center.z() += c;
 		
 		addVertex(coords);
 	}
@@ -45,9 +49,9 @@ void Mesh::loadOff(char* meshFile)
 		addTriangle((int) a, (int) b, (int) c); //no -1 'cos idxs start from 0 for off files
 	}
 
-	center.x() /= nVerts;
-	center.y() /= nVerts;
-	center.z() /= nVerts;
+	//center.x() /= nVerts;
+	//center.y() /= nVerts;
+	//center.z() /= nVerts;
 	//std::cout << center << std::endl;
 //	avgEdgeLen = edgeLenTotal / ((int) edges.size());
 //	computeBoundingBox();
@@ -170,11 +174,11 @@ void Mesh::calculateAreas(){
 		float ab[3];
 		float ac[3];
 
-		for (int i = 0; i < 3;i++)
-			ab[i] = a[i] - b[i];
+		for (int j = 0; j < 3;j++)
+			ab[j] = a[j] - b[j];
 
-		for (int i = 0; i < 3; i++)
-			ac[i] = a[i] - c[i];
+		for (int j = 0; j < 3; j++)
+			ac[j] = a[j] - c[j];
 
 		float x1 = ab[0];
 		float x2 = ab[1];
@@ -192,6 +196,41 @@ void Mesh::calculateAreas(){
 
 }
 
+vector<graph::Vertex*> Mesh::createVectorGraph(){
+
+	std::vector<graph::Vertex*> graph;
+	
+
+	for (int i = 0; i < this->verts.size(); i++){
+
+		Vertex* v = this->verts[i];
+
+		graph::Vertex *vg = new graph::Vertex(i);
+
+		graph.push_back(vg);
+	}
+
+	for (int i = 0; i < this->verts.size(); i++){
+
+		Vertex* v = this->verts[i];
+
+		for (int j = 0; j < v->vertList.size(); j++){
+
+			int n = v->vertList[j];
+
+			graph::Edge* ee = new graph::Edge();
+
+			ee->from = graph[v->idx];
+			ee->to = graph[n];
+			ee->v = new Vector(v->coords[0] - verts[n]->coords[0], v->coords[1] - verts[n]->coords[1], v->coords[2] - verts[n]->coords[2]);
+
+			graph[i]->outs.push_back(ee);
+		}
+
+	}
+
+	return graph;
+}
 
 vtkPolyData* Mesh::getVTKPolyData(bool isMesh){
 
@@ -219,7 +258,7 @@ vtkPolyData* Mesh::getVTKPolyData(bool isMesh){
 		vertices->InsertNextCell(1, &i);
 
 	}
-
+	
 	for (int i = 0; i < nTris; i++) {
 
 		triangles = new int[3];
@@ -248,6 +287,142 @@ vtkPolyData* Mesh::getVTKPolyData(bool isMesh){
 
 }
 
+Mesh* Mesh::getSubsetByVertices(vector<int> vertices){
+
+	Mesh* subset = new Mesh();
+
+	for (int i = 0; i < vertices.size(); i++) {
+
+		int vid = vertices[i];
+		float *p = new float[3];
+		p[0] = this->verts[vid]->coords[0];
+		p[1] = this->verts[vid]->coords[1];
+		p[2] = this->verts[vid]->coords[2];
+
+		subset->addVertex(p);
+
+	}
+
+	for (int i = 0; i < vertices.size(); i++){
+		int vid = vertices[i];
+		for (int j = 0; j < this->verts[vid]->triList.size(); j++){
+
+			int tid = this->verts[vid]->triList[j];
+
+			auto it1 = find(vertices.begin(), vertices.end(), this->tris[tid]->v1i);
+			int index1 = it1 - vertices.begin();
+
+			auto it2 = find(vertices.begin(), vertices.end(), this->tris[tid]->v2i);
+			int index2 = it2 - vertices.begin();
+
+			auto it3 = find(vertices.begin(), vertices.end(), this->tris[tid]->v3i);
+			int index3 = it3 - vertices.begin();
+
+
+			if (it1 != vertices.end() && it2 != vertices.end() && it3 != vertices.end()){
+
+				bool repeated = false;
+				for (int t = 0; t < subset->tris.size() ; t++){
+					if (subset->tris[t]->v1i == index1 && subset->tris[t]->v2i == index2 && subset->tris[t]->v3i == index3){
+						repeated = true;
+						break;
+					}
+
+				}
+
+				if (!repeated){
+					subset->addTriangle(index1, index2, index3);
+					
+				}
+
+			}
+		}
+	}
+
+	return subset;
+}
+vtkPolyData* Mesh::getVTKPolyDataSubsetByVertices(vector<int> vertices, int color){
+
+
+	int triCount = 0;
+	vtkPolyData* cube = vtkPolyData::New();
+	vtkPoints *points = vtkPoints::New();
+	vtkCellArray *polys = vtkCellArray::New();
+	vtkFloatArray *scalars = vtkFloatArray::New();
+
+	for (int i = 0; i < vertices.size(); i++) {
+
+		int vid = vertices[i];
+		double p[3];
+		p[0] = (double)this->verts[vid]->coords[0];
+		p[1] = (double)this->verts[vid]->coords[1];
+		p[2] = (double)this->verts[vid]->coords[2];
+		points->InsertPoint(i, p);
+
+	}
+
+	for (int i = 0; i < vertices.size(); i++){
+		int vid = vertices[i];
+		for (int j = 0; j < this->verts[vid]->triList.size(); j++){
+
+			int tid = this->verts[vid]->triList[j];
+
+			auto it1 = find(vertices.begin(), vertices.end(), this->tris[tid]->v1i);
+			int index1 = it1 - vertices.begin();
+
+			auto it2 = find(vertices.begin(), vertices.end(), this->tris[tid]->v2i);
+			int index2 = it2 - vertices.begin();
+
+			auto it3 = find(vertices.begin(), vertices.end(), this->tris[tid]->v3i);
+			int index3 = it3 - vertices.begin();
+
+
+			if (it1 != vertices.end() && it2 != vertices.end() && it3 != vertices.end()){
+
+				int *triangles = new int[3];
+				int n;
+				bool repeated = false;
+				for (int t = 0;; t++){
+
+					if (!polys->GetNextCell(n, triangles))
+						break;
+
+					if (triangles[0] == index1 && triangles[1] == index2 && triangles[2] == index3){
+						repeated = true;
+						break;
+					}
+
+				}
+
+				if (!repeated){
+					int triangles[3];
+					triangles[0] = index1;
+					triangles[1] = index2;
+					triangles[2] = index3;
+					polys->InsertNextCell(3, triangles);
+				}
+
+
+			}
+		}
+	}
+
+	if (color >= 0){
+		for (int i = 0; i < vertices.size(); i++)
+			scalars->InsertTuple1(i, color);
+	}
+	
+	// We now assign the pieces to the vtkPolyData.
+	cube->SetPoints(points);
+	points->Delete();
+	cube->SetPolys(polys);
+	polys->Delete();
+	cube->GetPointData()->SetScalars(scalars);
+	scalars->Delete();
+	
+	return cube;
+
+}
 
 
 void Mesh::createCube(float sideLength)
@@ -298,11 +473,11 @@ void Mesh::createCube(float sideLength)
 	addTriangle(3, 5, 4);
 }
 
-void Mesh::addVertex(float* coords)
+int Mesh::addVertex(float* coords)
 {
 	int idx = verts.size();
 	verts.push_back( new Vertex(idx, coords) );
-
+	return idx;
 
 
 }
@@ -316,14 +491,14 @@ void Mesh::addTriangle(int v1i, int v2i, int v3i)
 	verts[v2i]->triList.push_back( idx );
 	verts[v3i]->triList.push_back( idx );
 
-	if (! makeVertsNeighbors(v1i, v2i) )
-		addEdge(v1i, v2i);
+	if (! makeVertsNeighbors(v1i, v2i,idx) )
+		addEdge(v1i, v2i,idx);
 
-	if (! makeVertsNeighbors(v1i, v3i) )
-		addEdge(v1i, v3i);
+	if (! makeVertsNeighbors(v1i, v3i,idx) )
+		addEdge(v1i, v3i, idx);
 
-	if (! makeVertsNeighbors(v2i, v3i) )
-		addEdge(v2i, v3i);
+	if (! makeVertsNeighbors(v2i, v3i,idx) )
+		addEdge(v2i, v3i, idx);
 }
 
 
@@ -342,7 +517,7 @@ void Mesh::calculateDihedrals(){
 			Triangle* neighbor = t->neighborhood[j];
 
 			float angle = t->tNormal.calculateAngleBetween(neighbor->tNormal);
-
+			//cout << angle << endl;
 			if (angle > maxAngle){
 
 				maxAngle = angle;
@@ -351,21 +526,63 @@ void Mesh::calculateDihedrals(){
 
 		}
 
-		t->dihedral = maxAngle;
+		t->dihedral = maxAngle;  
+		
+	}
 
 
-		         
+	for (int i = 0; i < this->verts.size(); i++){
+
+		Vertex* v = this->verts[i];
+		float maxDihedral = 0;
+
+
+		for (int j = 0; j < v->triList.size(); j++){
+
+			int index = v->triList[j];
+
+			Triangle* tri = this->tris[index];
+			//cout << tri->dihedral << endl;
+			if (tri->dihedral > maxDihedral)
+				maxDihedral = tri->dihedral;
+		}
+
+		v->dihedral = maxDihedral;
+
 	}
 
 }
 
-bool Mesh::makeVertsNeighbors(int v, int w)
+bool Mesh::makeVertsNeighbors(int v, int w,int tid)
 {
 	//try to make v and w neighbor; return true if they already are
 
-	for (int check = 0; check < (int) verts[v]->vertList.size(); check++)
-		if (verts[ v ]->vertList[ check ] == w)
+	for (int check = 0; check < (int)verts[v]->vertList.size(); check++){
+		if (verts[v]->vertList[check] == w){
+
+
+			int edgeid = 0;
+
+			for (int i = 0; i < verts[v]->edgeList.size(); i++){
+
+				int eid = verts[v]->edgeList[i];
+				if (edges[eid]->v1i == w || edges[eid]->v2i == w){
+
+					if (tid != -1)
+						edges[eid]->tris.push_back(tid);
+
+
+				}
+
+
+			}
+
+
+
 			return true;
+		}
+
+	}
 
 	verts[v]->vertList.push_back(w);
 	verts[w]->vertList.push_back(v);
@@ -377,10 +594,34 @@ inline float distanceBetween(float* a, float* b)
 	return (float) sqrt( (a[0]-b[0])*(a[0]-b[0]) + (a[1]-b[1])*(a[1]-b[1]) + (a[2]-b[2])*(a[2]-b[2]) );
 }
 
-void Mesh::addEdge(int a, int b)
+void Mesh::addEdge(int a, int b,int tid)
 {
 	int idx = edges.size();
-	edges.push_back( new Edge(idx, a, b, distanceBetween(verts[a]->coords, verts[b]->coords) ) );
+	int index = -1;
+	for (int i = 0; i < edges.size(); i++){
+
+		if (((edges[i]->v1i == a) && (edges[i]->v2i == b)) || ((edges[i]->v1i == b) && (edges[i]->v2i == a)))
+			index = i;
+
+	}
+
+	if (index != -1){
+
+		if (tid != -1)
+			edges[index]->tris.push_back(tid);
+
+		edges.push_back(edges[index]);
+
+	}
+	else{
+		
+		Edge* e = new Edge(idx, a, b, distanceBetween(verts[a]->coords, verts[b]->coords));
+
+		if (tid != -1)
+			e->tris.push_back(tid);
+
+		edges.push_back(e);
+	}
 
 	verts[a]->edgeList.push_back(idx);
 	verts[b]->edgeList.push_back(idx);
@@ -413,12 +654,11 @@ void Mesh::assignNormalsToTriangles()
 		normal.Normalize();
 
 		this->tris[i]->tNormal = normal;
+		//std::cout << normal.X << " " << normal.Y << " " << normal.Z << endl;
 		this->tris[i]->normalId = -1;
 
 	}
 }
-
-
 
 void Mesh::findNeighborhoodTriangles()
 {
@@ -477,73 +717,6 @@ void Mesh::assignEdgesToTriangles()
 		tris[i]->e3 = eid3;
 	}
 }
-
-
-
-void Mesh::addExtraEdgesToTheMesh( float threshold)
-{
-	
-	std::vector<std::pair<unsigned int, unsigned int> > newEdges;
-
-	for (unsigned int i = 0; i < this->tris.size(); i++) {
-		Triangle *refTri = this->tris[i];
-		std::vector<Triangle*> planar_neighborhood;
-		planar_neighborhood.push_back(refTri);
-		for (unsigned int j = 0; j < refTri->neighborhood.size(); j++) {
-			Triangle *srcTri = refTri->neighborhood[j];
-
-			Vector n1 = refTri->tNormal;
-			Vector n2 = srcTri->tNormal;
-
-			float dot = n1.dotProduct(n2);
-			float angle = acos(dot);
-			if (angle <threshold) //Means that they are planar
-			{
-			
-				planar_neighborhood.push_back(srcTri);
-			}
-
-		}
-
-
-		
-			for (unsigned int j = 0; j < planar_neighborhood.size(); j++){
-
-				int uncommonVertex = -1;
-				int uncommonVertex2 =- 1;
-				Triangle *neighbor = planar_neighborhood[j];
-				int re1 = refTri->v1i; int re2 = refTri->v2i; int re3 = refTri->v3i;
-				int se1 = neighbor->v1i; int se2 = neighbor->v2i; int se3 = neighbor->v3i;
-
-				if (se1 != re1 && se1 != re2 && se1 != re3)
-					uncommonVertex = se1;
-				else if (se2 != re1 && se2 != re2 && se2 != re3)
-					uncommonVertex = se2;
-				else if (se3 != re1 && se3 != re2 && se3 != re3)
-					uncommonVertex = se3;
-
-				if (re1 != se1 && re1 != se2 && re1 != se3)
-					uncommonVertex2 = re1;
-				else if (re2 != se1 && re2 != se2 && re2 != se3)
-					uncommonVertex2 = re2;
-				else if (re3 != se1 && re3 != se2 && re3 != se3)
-					uncommonVertex2 = re3;
-
-				if (uncommonVertex != -1 && uncommonVertex2 != -1)
-					this->addEdge(uncommonVertex, uncommonVertex2);
-
-			}
-
-
-		
-
-	}
-
-	
-}
-
-
-
 
 
 
@@ -610,21 +783,19 @@ double cotangentWeight(Mesh* md, int iv, int jv) {
 	return cots / noTri;
 }
 
-
-
 void Mesh::initialize(){
 	tripletList.clear();
 	for (int i = 0; i < (int)this->verts.size(); i++)
 	{
 		double sum_w = 0.0;
 		for (int j = 0; j < (int)this->verts[i]->vertList.size(); j++) {
-			double w_ij = cotangentWeight(this, i, this->verts[i]->vertList[j]);
-			//w_ij = 1.0; //Compute cotanjant weights here
+			double w_ij = 1;// cotangentWeight(this, i, this->verts[i]->vertList[j]);
+			
 			sum_w += w_ij;
 		}
 		for (int j = 0; j < (int)this->verts[i]->vertList.size(); j++) {
-			double w_ij =  cotangentWeight(this, i, this->verts[i]->vertList[j]);
-			//w_ij = 1.0; //Compute cotanjant weights here
+			double w_ij = 1;// cotangentWeight(this, i, this->verts[i]->vertList[j]);
+			
 
 			if (i != this->verts[i]->vertList[j]) {
 				double entry = double((-1.0)*w_ij / sum_w);
@@ -651,16 +822,21 @@ void Mesh::initialize(){
 }
 
 
-void Mesh::deform(Mesh* target,float weigth)
+
+
+
+
+void Mesh::deform2(Mesh* target,float weigth)
 {
 
-	target->initialize();
+	//target->initialize();
 	
 	int LapSize = this->verts.size();
 	
 
 	SpMat W = SpMat(LapSize, LapSize);
 	W.setIdentity();
+	
 	
 	kdres* resultSet = NULL;
 	kdtree* kd = kd_create(3);
@@ -698,29 +874,30 @@ void Mesh::deform(Mesh* target,float weigth)
 		vx[i] = this->verts[i]->coords[0];
 		vy[i] = this->verts[i]->coords[1];
 		vz[i] = this->verts[i]->coords[2];
-		kd_res_free(resultSet);
-	
-		
-
-		
+		kd_res_free(resultSet);		
 	}
 
 	kd_clear(kd);
 	kd_free(kd);
 	
 	
-	//SpMat L_ = target->L;
+	SpMat L_ = target->L;
+	
+
+	SpMat LTL = L.transpose()*L;
 
 
-	SpMat A = W + weigth*(L.transpose()*L);
+	//std::cout << "avg: " << LTL.sum() / (LTL.cols() * LTL.rows()) << std::endl;
 
-	LTLx = (L.transpose()*L)*vx;
-	LTLy = (L.transpose()*L)*vy;
-	LTLz = (L.transpose()*L)*vz;
+	SpMat A = W + weigth*(LTL);
 
-	bx = W*cx + weigth*LTLx;
-	by = W*cy + weigth*LTLy;
-	bz = W*cz + weigth*LTLz;
+	LTLx = LTL*cx;
+	LTLy = LTL*cy;
+	LTLz = LTL*cz;
+
+	bx = W*cx + weigth*(L.transpose()*L_)*cx;
+	by = W*cy + weigth*(L.transpose()*L_)*cy;
+	bz = W*cz + weigth*(L.transpose()*L_)*cz;
 
 	Eigen::SimplicialCholesky<SpMat> chol(A);  // performs a Cholesky factorization of LpTLp
 	vx = chol.solve(bx);
@@ -741,6 +918,156 @@ void Mesh::deform(Mesh* target,float weigth)
 	
 }
 
+void Mesh::deform(Mesh* target, float weigth)
+{
+
+	target->initialize();
+
+	int LapSize = this->verts.size();
+
+
+	SpMat W = SpMat(LapSize, LapSize);
+	W.setIdentity();
+
+	kdres* resultSet = NULL;
+	kdtree* kd = kd_create(3);
+
+	int* voxelIdx;
+	float voxelCoord[3];
+
+	for (int i = 0; i < target->verts.size(); i++)
+	{
+
+		int* tmp = new int[1];
+		*tmp = i;
+		kd_insert3f(kd, target->verts[i]->coords[0], target->verts[i]->coords[1], target->verts[i]->coords[2], tmp);
+		delete tmp;
+	}
+
+
+	for (int i = 0; i < this->verts.size(); i++)
+	{
+
+
+
+		resultSet = kd_nearest3f(kd, this->verts[i]->coords[0], this->verts[i]->coords[1], this->verts[i]->coords[2]);
+		voxelIdx = (int*)kd_res_itemf(resultSet, voxelCoord);
+
+		cx[i] = voxelCoord[0];
+		cy[i] = voxelCoord[1];
+		cz[i] = voxelCoord[2];
+
+
+		//cx[i] = target->verts[i]->coords[0];
+		//cy[i] = target->verts[i]->coords[1];
+		//cz[i] = target->verts[i]->coords[2];
+
+		vx[i] = this->verts[i]->coords[0];
+		vy[i] = this->verts[i]->coords[1];
+		vz[i] = this->verts[i]->coords[2];
+		kd_res_free(resultSet);
+
+
+
+
+	}
+
+	kd_clear(kd);
+	kd_free(kd);
+
+
+	//SpMat L_ = target->L;
+
+
+	SpMat A = W + weigth*(L.transpose()*L);
+
+	LTLx = (L.transpose()*L)*vx;
+	LTLy = (L.transpose()*L)*vy;
+	LTLz = (L.transpose()*L)*vz;
+
+	bx = W*cx + weigth*LTLx;
+	by = W*cy + weigth*LTLy;
+	bz = W*cz + weigth*LTLz;
+
+	Eigen::SimplicialCholesky<SpMat> chol(A);  // performs a Cholesky factorization of LpTLp
+	vx = chol.solve(bx);
+	vy = chol.solve(by);
+	vz = chol.solve(bz);
+
+
+	for (int i = 0; i < LapSize; i++){
+
+		this->verts[i]->coords[0] = vx[i];
+		this->verts[i]->coords[1] = vy[i];
+		this->verts[i]->coords[2] = vz[i];
+
+	}
+
+}
+
+void Mesh::deform(Mesh* target, float weigth, vector<int> vertList){
+
+	//target->initialize();
+
+	int LapSize = this->verts.size();
+
+
+	SpMat W = SpMat(LapSize, LapSize);
+	W.setZero();
+	std::vector<Trip> tripletListW;
+	for (int i = 0; i < this->verts.size(); i++)
+	{
+
+		if (std::find(vertList.begin(), vertList.end(), i) == vertList.end()){
+
+			cx[i] = this->verts[i]->coords[0];
+			cy[i] = this->verts[i]->coords[1];
+			cz[i] = this->verts[i]->coords[2];
+
+		}
+
+		else{
+
+			cx[i] = target->verts[i]->coords[0];
+			cy[i] = target->verts[i]->coords[1];
+			cz[i] = target->verts[i]->coords[2];
+
+			tripletListW.push_back(Trip(i, i, 1.0));
+		}
+
+		vx[i] = this->verts[i]->coords[0];
+		vy[i] = this->verts[i]->coords[1];
+		vz[i] = this->verts[i]->coords[2];
+	}
+
+
+	//SpMat L_ = target->L;
+	W.setFromTriplets(tripletListW.begin(), tripletListW.end());
+	SpMat A = W + weigth*(L.transpose()*L);
+
+	LTLx = (L.transpose()*L)*vx;
+	LTLy = (L.transpose()*L)*vy;
+	LTLz = (L.transpose()*L)*vz;
+
+	bx = W*cx + weigth*LTLx;
+	by = W*cy + weigth*LTLy;
+	bz = W*cz + weigth*LTLz;
+
+	Eigen::SimplicialCholesky<SpMat> chol(A);  // performs a Cholesky factorization of LpTLp
+	vx = chol.solve(bx);
+	vy = chol.solve(by);
+	vz = chol.solve(bz);
+
+
+	for (int i = 0; i < LapSize; i++){
+
+		this->verts[i]->coords[0] = vx[i];
+		this->verts[i]->coords[1] = vy[i];
+		this->verts[i]->coords[2] = vz[i];
+
+	}
+
+}
 
 void Mesh::write(char* filename, bool isMesh){
 
@@ -778,9 +1105,6 @@ void Mesh::write(char* filename, bool isMesh){
 
 }
 
-
-
-
 void Mesh::deform(Mesh* target, float weigth, int iterations){
 
 
@@ -790,9 +1114,18 @@ void Mesh::deform(Mesh* target, float weigth, int iterations){
 		deform(target, weigth);
 	}
 
-
 }
 
+void Mesh::deform(Mesh* target, float weigth, int iterations, vector<int> corrVector){
+
+
+
+	for (int i = 0; i < iterations; i++){
+		//cout << i << endl;
+		deform(target, weigth,corrVector);
+	}
+
+}
 
 float Mesh::calculateScale(){
 
@@ -811,7 +1144,6 @@ float Mesh::calculateScale(){
 
 }
 
-
 void Mesh::scale(float s){
 
 
@@ -823,6 +1155,94 @@ void Mesh::scale(float s){
 	
 	}
 
+}
+
+
+
+
+void Mesh::removeEdge(int id){
+
+	cout << "tris\n";
+	for (int j = 0; j < edges[id]->tris.size(); j++)
+		cout << edges[id]->tris[j] << endl;
+
+	for (int i = 0; i < verts.size(); i++){
+
+		for (int j = 0; j < verts[i]->edgeList.size(); j++){
+
+			if (verts[i]->edgeList[j] > id)
+				verts[i]->edgeList[j]--;
+			else if (verts[i]->edgeList[j] == id)
+				verts[i]->edgeList.erase(verts[i]->edgeList.begin() + j);
+
+		}
+		
+	}
+
+	
+
+	for (int i = 0; i < edges[id]->tris.size(); i++){
+
+
+		int tid = edges[id]->tris[i];
+
+		for (int j = 0; j < edges.size(); j++){
+			if (j == id)
+				continue;
+
+			for (int k = 0; k < edges[j]->tris.size(); k++){
+			
+				if (edges[j]->tris[k] == tid)
+					edges[j]->tris.erase(edges[j]->tris.begin() + k);
+				else if (edges[j]->tris[k] > tid)
+					edges[j]->tris[k]--;
+
+			}
+
+
+		}
+
+
+		for (int j = 0; j < verts.size(); j++){
+
+
+			for (int k = 0; k < verts[j]->triList.size(); k++){
+
+				if (verts[j]->triList[k] == tid)
+					verts[j]->triList.erase(verts[j]->triList.begin() + k);
+				else if (verts[j]->triList[k] > tid)
+					verts[j]->triList[k]--;
+
+			}
+
+		}
+
+	}
+
+
+	std::vector<Triangle*> newTris;
+	for (int i = 0; i < tris.size(); i++){
+
+		bool deleted = false;
+
+		for (int j = 0; j < edges[id]->tris.size(); j++){
+
+			if (i == edges[id]->tris[j]){
+				deleted = true;
+				cout << "delete" << endl;
+			}
+
+		}
+
+		if (!deleted)
+			newTris.push_back(tris[i]);
+	}
+
+
+	tris = newTris;
+
+
+		edges.erase(edges.begin() + id);
 }
 
 
