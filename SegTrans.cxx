@@ -2048,12 +2048,8 @@ public:
 
 		if(key == "b"){
 
-
-			
-
-
 			vector<vector<int**>> faceHists;
-			for(int i=1;i<=5000;i++){
+			for(int i=1;i<=1000;i++){
 
 				string path;
 				if (!pointCloudMode)
@@ -2685,7 +2681,7 @@ public:
 				int numHists;
 				
 
-				for (int fn = 1; fn < 5000; fn++){
+				for (int fn = 1; fn < 1000; fn++){
 
 					vector<int**> faceHist;
 					int numParts, numHists, lenHists;
@@ -2785,7 +2781,7 @@ public:
 				}
 
 				
-				
+				outFace->write((char*)("faces\\testface" + to_string(testFaceId) + "_out2.off").c_str());
 
 				vector<int> innerPoints2;
 				for (int ii = 0; ii < innerPoints.size(); ii++)
@@ -3246,36 +3242,29 @@ int* distHist(vector<Vertex*> contourPoints, int index){
 		hist[i] = 0;
 
 	
-	float mean = 0;
+	float min = 9999999999999999;
+	float max = 0;
 	for (int i = 0; i < n; i++){
 		dists[i] = sqrt(dist2Between(contourPoints[index]->coords, contourPoints[i]->coords));
-		mean += dists[i];
-		//cout << dists[i] << endl;
+		if (dists[i] < min)
+			min = dists[i];
+		if (dists[i] > max)
+			max = dists[i];
 
 	}
 
-	mean /= n;
+	for (int i = 0; i < n; i++)
+		dists[i] -= min;
+
+	max -= min;
 
 	for (int i = 0; i < n; i++)
-		dists[i] -= mean;
+		dists[i] /= max;
 
-	
-	float stdDev = 0;
-
-	for (int i = 0; i < n; i++)
-		stdDev += dists[i] * dists[i];
-
-
-	stdDev = sqrt(stdDev / n);
-
-	for (int i = 0; i < n; i++)
-		dists[i] /= stdDev;
-
-	
 	//cout << "------------------------------------------\n";
 	for (int i = 0; i < n; i++){
 		//cout << dists[i] << endl;
-		int ind = dists[i] / 0.2 + 10;
+		int ind = dists[i] / 0.05 ;
 		if (ind < 0)
 			ind = 0;
 		if (ind>19)
@@ -3298,9 +3287,13 @@ int* angleHist(vector<Vertex*> contourPoints, int index){
 		hist[i] = 0;
 	}
 
-	float meanx = 0;
-	float meany = 0;
-	float meanz = 0;
+	float minx = 999999;
+	float miny = 999999;
+	float minz = 999999;
+
+	float maxx = 0;
+	float maxy = 0;
+	float maxz = 0;
 
 	for (int i = 0; i < n; i++){
 
@@ -3328,33 +3321,50 @@ int* angleHist(vector<Vertex*> contourPoints, int index){
 		//angles[i+1] = angles[i+1] * 180 / M_PI;
 		//angles[i+2] = angles[i+2] * 180 / M_PI;
 
-		meanx += angles[3*i];
-		meany += angles[3*i+1];
-		meanz += angles[3*i+2];
+		if (angles[3 * i] < minx)
+			minx = angles[3 * i];
+		if (angles[3 * i] > maxx)
+			maxx = angles[3 * i];
 
 
+		if (angles[3 * i+1] < miny)
+			miny = angles[3 * i+1];
+		if (angles[3 * i+1] > maxy)
+			maxy = angles[3 * i+1];
+
+		if (angles[3 * i + 2] < minz)
+			minz = angles[3 * i + 2];
+		if (angles[3 * i + 2] > maxz)
+			maxz = angles[3 * i + 2];
 
 		//cout << angles[i] << " " << angles[i+1] << " " << angles[i+2] << " ";
 
 	}
 	//cout << endl;
 
-	meanx /= n;
-	meany /= n;
-	meanz /= n;
+	for (int i = 0; i < n; i++){
+
+		angles[i] -= minx;
+		angles[i+1] -= miny;
+		angles[i+2] -= minz;
+	}
+
+	maxx -= minx;
+	maxy -= miny;
+	maxz -= minz;
 
 	for (int i = 0; i < n; i++){
 
-		angles[i] -= meanx;
-		angles[i+1] -= meany;
-		angles[i+2] -= meanz;
+		angles[3 * i] /= maxx;
+		angles[3 * i + 1] /= maxy;
+		angles[3 * i + 2] /= maxz;
 	}
 
-	float hsize = M_PI / 20.;
+	
 
 	for (int i = 0; i < 3*n; i++){
 		//cout << angles[i] << endl;
-		int ind = angles[i] / hsize ;
+		int ind = angles[i] / 0.05 ;
 		if (ind < 0)
 			ind = 0;
 		if (ind>19)

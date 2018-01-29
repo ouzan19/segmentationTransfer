@@ -40,7 +40,7 @@ void Mesh::loadOff(char* meshFile)
 		//center.x() += a;
 		//center.y() += b;
 		//center.z() += c;
-		
+		  
 		addVertex(coords);
 	}
 	//verts ready, time to fill triangles
