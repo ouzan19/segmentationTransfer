@@ -176,7 +176,7 @@ public:
 	void addTriangle(int v1i, int v2i, int v3i);
 	vector<graph::Vertex*> createVectorGraph();
 	void removeEdge(int id);
-	
+	std::map<std::pair<int, int>, int> edgeMap;
 
 	
 private:

@@ -1,2 +1,3 @@
 ﻿  SegTrans.cxx
+C:\Users\ouzan\Documents\Visual Studio 2013\Projects\SegTrans\SegTrans.cxx(2685): warning C4101: 'numHists' : unreferenced local variable
   SegTrans.vcxproj -> C:\Users\ouzan\Documents\Visual Studio 2013\Projects\SegTrans\build\Release\SegTrans.exe

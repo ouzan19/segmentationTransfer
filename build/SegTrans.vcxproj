@@ -339,6 +339,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="..\ICP.hpp" />
     <ClInclude Include="..\kdtree.h" />
     <ClInclude Include="..\Mesh.h" />
+    <ClInclude Include="..\MtrxOps.h" />
     <ClInclude Include="..\Vector.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>

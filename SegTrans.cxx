@@ -146,15 +146,18 @@ float cutDiscrepancy(Mesh* mesh, vector<int> segments1, vector<int> segments2);
 vector<vector<int>> completeContoursByGeodesic(Mesh* cF, vector<vector<int>> inFaceParts);
 vector<vector<int>> findInnerContourVertices(Mesh* cF, vector<vector<int>> inFaceParts);
 vector<int**> extractContourFeatures(Mesh *face, vector<vector<int>> faceParts);
+vector<float*> extractContourFeatures2(Mesh *face, vector<vector<int>> faceParts);
 float matchFaceParts(vector<int**> f1, vector<int**> f2);
+
 float matchContour(int**, int**);
+float matchFaceParts(float* f1, float* f2);
 
 float triangleArea(vector<Vertex*> vertices, std::vector<int> hole, int v0, int v1, int v2);
 float holeCostFunc(vector<Vertex*> vertices, std::vector<int> hole, int i, int k, vector<int> &lamda);
 void trace(vector<Vertex*> vertices, std::vector<int> hole, int i, int k, vector<int> &lamda, vector<int> &newTriangles);
 
 vector<Vertex*> completeContour(vector<Vertex*> contourPoints);
-
+float nonRigidAlignment(vector<Vertex*> &pntSet1, vector<Vertex*> &pntSet2, int k);
 float dist2Between(float* p1, float* p2){
 
 	float sum = 0;
@@ -2047,13 +2050,8 @@ public:
 		}
 
 		if(key == "b"){
-
-
-			
-
-
 			vector<vector<int**>> faceHists;
-			for(int i=1;i<=5000;i++){
+			for(int i=1;i<=1000;i++){
 
 				string path;
 				if (!pointCloudMode)
@@ -2067,7 +2065,7 @@ public:
 					currentFace->loadOff((char*)path.c_str());
 				else
 					currentFace->loadxyz((char*)path.c_str());
-
+				
 				/*
 				int x = 200000  * ((i - 1) % 5);
 				int y = -200000 * ((i - 1) / 5);
@@ -2121,10 +2119,10 @@ public:
 
 				}
 
-				vector<int**> partHists;
-				partHists = extractContourFeatures(currentFace, correspondedFaceParts);
+				vector<float*> partHists;
+				partHists = extractContourFeatures2(currentFace, correspondedFaceParts);
 
-				ofstream hf("faces\\contourFeatures" + to_string(i) + ".txt");
+				ofstream hf("faces\\contourFeatures2_" + to_string(i) + ".txt");
 
 				hf << partHists.size() << " " << NUM_CONTOUR_POINTS << " " << 80 << endl;
 
@@ -2132,17 +2130,18 @@ public:
 
 					for (int p = 0; p < NUM_CONTOUR_POINTS; p++){
 
-						for (int q = 0; q < 80; q++)
-							hf << partHists[h][p][q] << " ";
+						//for (int q = 0; q < 80; q++)
+							hf << partHists[h][p] << " ";
 
-						hf << endl;
+						
 
 					}
+					hf << endl;
 				}
 				hf.close();
 
 				//faceHists.push_back(partHists);
-				for (int h = 0; h < partHists.size(); h++){
+				/*for (int h = 0; h < partHists.size(); h++){
 
 					for (int p = 0; p < NUM_CONTOUR_POINTS; p++)
 					{
@@ -2151,7 +2150,7 @@ public:
 					}
 
 					delete partHists[h];
-				}
+				}*/
 				delete currentFace;
 				std::cout << i << std::endl;
 			}
@@ -2656,8 +2655,8 @@ public:
 				of.close();
 
 
-				vector<int**> inputHist;
-				inputHist = extractContourFeatures(m, inputFaceParts);
+				vector<float*> inputHist;
+				inputHist = extractContourFeatures2(m, inputFaceParts);
 
 
 				ofstream hf("faces\\contourFeatures_input" + to_string(testFaceId) + ".txt");
@@ -2668,12 +2667,13 @@ public:
 
 					for (int p = 0; p < NUM_CONTOUR_POINTS; p++){
 
-						for (int q = 0; q < 80; q++)
-							hf << inputHist[h][p][q] << " ";
+						//for (int q = 0; q < 80; q++)
+							hf << inputHist[h][p] << " ";
 
-						hf << endl;
+						
 
 					}
+					hf << endl;
 				}
 				hf.close();
 
@@ -2685,28 +2685,38 @@ public:
 				int numHists;
 				
 
-				for (int fn = 1; fn < 5000; fn++){
+				for (int fn = 1; fn < 1000; fn++){
 
-					vector<int**> faceHist;
+					//if (!(fn == 694 || fn == 316 || fn == 28 || fn == 993 || fn == 688 || fn == 838 || fn == 389))
+						//continue;
+
+					//if (fn == 821 || fn == 79 || fn==141 || fn==35 || fn==240)
+						//continue;
+
+					vector<float*> faceHist;
 					int numParts, numHists, lenHists;
 
-					ifstream f("faces\\contourFeatures" + to_string(fn) + ".txt");
+					ifstream f("faces\\contourFeatures2_" + to_string(fn) + ".txt");
 
 					f >> numParts >> numHists >> lenHists;
 
 					for (int i = 0; i < numParts; i++){
 
-						int** hist = new int*[numHists];
+						float* hist = new float[numHists];
 						for (int j = 0; j < numHists; j++){
 
-							hist[j] = new int[lenHists];
+							/*hist[j] = new int[lenHists];
 							for (int k = 0; k < lenHists; k++){
 
 								int temp;
 								f >> temp;
 								hist[j][k] = temp;
 
-							}
+							}*/
+
+							float temp;
+							f >> temp;
+							hist[j] = temp;
 						}
 
 						faceHist.push_back(hist);
@@ -2716,7 +2726,7 @@ public:
 
 					for (int part = 0; part < numParts; part++){
 
-						float dist = matchContour(faceHist[part], inputHist[part]);
+						float dist = matchFaceParts(faceHist[part], inputHist[part]);
 
 						if (dist < minDists[part]){
 							minDists[part] = dist;
@@ -2726,11 +2736,11 @@ public:
 
 					}
 
-					for (int i = 0; i < numParts; i++){
+					/*for (int i = 0; i < numParts; i++){
 						for (int j = 0; j < numHists; j++)
 							delete faceHist[i][j];
 						delete faceHist[i];
-					}
+					}*/
 
 				}
 
@@ -2848,11 +2858,11 @@ public:
 
 				renderer->Modified();
 				*/
-				for (int i = 0; i < numParts; i++){
+				/*for (int i = 0; i < numParts; i++){
 					for (int j = 0; j < numHists; j++)
 						delete inputHist[i][j];
 					delete inputHist[i];
-				}
+				}*/
 				for (int i = 0; i < bestMatchFaces.size(); i++)
 					delete bestMatchFaces[i];
 				delete testFace;
@@ -2882,6 +2892,538 @@ private:
 
 };
 vtkStandardNewMacro(HighlightInteractorStyle);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////     TPS-RPM   ////////////////////////////////////////////////////////////
+#define INF							90000000000000.0f
+#define EXP							2.718281828f
+#include "MtrxOps.h"
+/*float distanceBetween(float* v1, float* v2)
+{
+	//In fact, the keyword inline is not necessary. If the function is defined with its body directly and the function
+	//has a smaller block of code, it will be automatically treated as inline by the compiler
+	return (float)sqrt((v2[0] - v1[0])*(v2[0] - v1[0]) + (v2[1] - v1[1])*(v2[1] - v1[1]) + (v2[2] - v1[2])*(v2[2] - v1[2]));
+}*/
+inline float distanceBetween2(float* v1, float* v2)
+{
+	
+	return sqrt((v2[0] - v1[0])*(v2[0] - v1[0]) + (v2[1] - v1[1])*(v2[1] - v1[1]) + (v2[2] - v1[2])*(v2[2] - v1[2]));
+}
+
+float computeMSEe(vector<Vertex*> pntSet1, vector<Vertex*> pntSet2)
+{
+	//computes mean squared error (mse) b/w 2 pnts sets of size n1 & n2, that is sum of squared distances of closest pairs
+	int n1 = pntSet1.size();
+	int n2 = pntSet2.size();
+	//before computing mse, i need closest-pnt correspondence b/w mesh1 baseVerts & mesh2 baseVerts
+	int* closestPntInSet1 = new int[n2]; //closest pnt in pntSet1 for given pntSet2 vertex (therefore n2 elements)
+	float dist;
+	for (int bv2 = 0; bv2 < n2; bv2++)
+	{
+		closestPntInSet1[bv2] = bv2;
+		float minDist = INF;
+		for (int bv1 = 0; bv1 < n1; bv1++)
+		{
+			dist = distanceBetween2(pntSet2[bv2]->coords, pntSet1[bv1]->coords); //since just comparison, not use sqrt to save time
+			if (dist < minDist)
+			{
+				closestPntInSet1[bv2] = bv1; //closest pnt in pntSet1 for pntSet2 vertex bv2 is bv1
+				minDist = dist;
+			}
+		}
+	}
+	float mse = 0.0f; //now i can compute this
+	for (int bv2 = 0; bv2 < n2; bv2++)
+	{
+		//squared distance b/w (target) mesh2.bv and its correspondence in mesh1 for this iteration (closestBaseInM1)
+		dist = pow(pntSet2[bv2]->coords[0] - pntSet1[closestPntInSet1[bv2]]->coords[0], 2.0f) +
+			pow(pntSet2[bv2]->coords[1] - pntSet1[closestPntInSet1[bv2]]->coords[1], 2.0f) +
+			pow(pntSet2[bv2]->coords[2] - pntSet1[closestPntInSet1[bv2]]->coords[2], 2.0f);
+		//		if (! rootBasedSymSoln)
+		mse += sqrt(dist); //no sqrt() above, hence dist = squaredDist indeed		
+		//		else
+		//			mse += pow(gd2r2[bv2] - gd2r1[ closestPntInSet1[bv2] ], 2.0f); //replace w/ += dist above for symmetry-problem solution
+	}
+	mse /= n2;
+	delete[] closestPntInSet1;
+	return mse;
+}
+
+float findT0(vector<Vertex*> pntSet1, vector<Vertex*> pntSet2)
+{
+
+	int n1 = pntSet1.size();
+	int n2 = pntSet2.size();
+
+	float maxDist2 = -INF; //this T0 best so far
+	for (int bv = 0; bv < n1; bv++)
+	{
+		for (int bv2 = 0; bv2 < n2; bv2++)
+		{
+			float* v1 = pntSet1[bv]->coords;
+			float* v2 = pntSet2[bv2]->coords; //pntSet2[bv]->coords;
+			//wrongly v2 = pntSet2[bv]->coords was in use while i was running paper tests; now, i corrected it!!!!!!
+
+			float dist2 = (v2[0] - v1[0])*(v2[0] - v1[0]) + (v2[1] - v1[1])*(v2[1] - v1[1]) + (v2[2] - v1[2])*(v2[2] - v1[2]);
+			dist2 = sqrt(dist2);
+			if (dist2 > maxDist2)
+				maxDist2 = dist2;
+		}
+	}
+	return maxDist2; //pairFrom2SetsWithSameIndex*/
+
+}
+
+
+void mtrxMult(float** result, int m1Row, int m1Col, int m2Row, int m2Col, float** m1, float** m2)
+{
+	//result = m1 * m2
+
+	//init result to 0
+	for (int r = 0; r < m1Row; r++)
+	for (int c = 0; c < m2Col; c++)
+		result[r][c] = 0.0f;
+
+	/*pseudocode:
+	for each row i in matrix1 do:
+	for each column j in matrix 2 do:
+	for each column k in matrix1 do:
+	increase  matrix3[i,j] by matrix1[i,k]*matrix2[k,j] */
+	for (int m1r = 0; m1r < m1Row; m1r++)
+	for (int m2c = 0; m2c < m2Col; m2c++)
+	for (int m1c = 0; m1c < m1Col; m1c++)
+		result[m1r][m2c] += m1[m1r][m1c] * m2[m1c][m2c]; //call-by-ref to result
+}
+
+float minMSE = INF;
+float nonRigidAlignment(vector<Vertex*> &pntSet1, vector<Vertex*> &pntSet2)
+{
+	int n1 = pntSet1.size();
+	int n2 = pntSet2.size();
+
+	//employs thin-plate spline, robust pnt mathing (TPS-RPM) non-rigid transformation to transform pntSet1 to target mesh2
+
+	float initialMSE = computeMSEe(pntSet1, pntSet2); //dellaterrrrrrrrrrr (similarly, int k above is required for fprint only)
+
+	cout << "non-rigid TPS-RPM to align 2 patches....\n";
+
+	int N = n2, K = n1; //N & K not necessarily equal for this function
+
+	//center of masses (or means) that will act as outlier cluster centers for last row and last col of m mtrx
+	float m1[3];
+	float m2[3];
+	float sum[3] = { 0.0f, 0.0f, 0.0f };
+	for (int bv = 0; bv < N; bv++)
+	{
+		sum[0] += pntSet2[bv]->coords[0];
+		sum[1] += pntSet2[bv]->coords[1];
+		sum[2] += pntSet2[bv]->coords[2];
+	}
+		
+	m2[0] = sum[0] / (float)N;
+	m2[1] = sum[1] / (float)N;
+	m2[2] = sum[2] / (float)N;
+
+	float sum2[3] = { 0.0f, 0.0f, 0.0f };
+	for (int bv = 0; bv < K; bv++)
+	{
+		sum2[0] += pntSet1[bv]->coords[0];
+		sum2[1] += pntSet1[bv]->coords[1];
+		sum2[2] += pntSet1[bv]->coords[2];
+	}
+	
+	m1[0] = sum2[0] / (float)N;
+	m1[1] = sum2[1] / (float)N;
+	m1[2] = sum2[2] / (float)N;
+
+	//no need for initial its and/or principalAxAlignment in alignWith() 'cos TPS-RPM handles them
+	//actually it's better to start w/ aligned center-of-masses; doing that in caller
+
+	//////////// TPS-RPM algo ////////////
+	//init control parameters
+	int perT_maxit = 500;
+	float anneal_rate = 0.93, //0.97f
+		lamda1_init = 100000.000f, lamda2_init = 0.01f;
+	//other params
+	float T0 = findT0(pntSet1, pntSet2); //computeCorrespondenceError() = 3.3 x 10^7 (largestX), = 3.2 x 10^7 (pairFrom2SetsWithSameIndex)
+		//initialMSE * 10.0f, //correspErr = 2.8 x 10^7
+		//initialMSE * 7.0f, //correspErr = 2.8 x 10^7
+		//initialMSE * 1.0f, //correspErr = 3.5 x 10^7
+		//2500.0f, //correspErr = 2.3 x 10^7
+		//[correspErr of input\animation\5-->212 = 1.8 x 10^11 but this data is huge, e.g. bbox.(w,h,d) = (5225.22, 7940.11, 18179.8), whereas jumping.bbox = (601.231, 1611.88, 622.9)
+		//best is pairFrom2SetsWithSameIndex; others' correspErr lower but no worry 'cos they produce >badMSE nonRigidAlignments and hence cancelled most of the time
+		//note also that pairFrom2SetsWithSameIndex used in findT0() corresponds to ground-truth correspondences (so, you may use L2-closest correspondence for pairing)
+	float Tfinal = 0.1f;
+	float T = T0; //start temparature at Tinit and gradually decrease it till Tfinal in determenistic annealing loop below
+	//Tfinal = is chosen to be equal to the average of the squared distance between the nearest neighbors within the set of points which are being deformed; interpretation
+	//is that at Tfinal, the Gaussian clusters for all the points will then barely overlap with one another (currently just use nIters or mse to quit)
+
+	//K+1 x N+1 fuzzy correspondence matrix (+1 for outliers row & col)
+	float** m = new float*[K + 1];
+	for (int a = 0; a < K + 1; a++)
+		m[a] = new float[N + 1];
+	//auxiliary arrays for iterated row/col normalization below
+	float* denomR = new float[K],
+		*denomC = new float[N], threshold = 0.005f;
+
+	//Y matrix that will be updated by m and stable mesh2.coords below and then guide mesh1.coords
+	float** Y = new float*[K]; //Kx4, e.g. row7 = [1, 40, 45, 48] (1st col always 1)
+	for (int a = 0; a < K; a++)
+	{
+		Y[a] = new float[4];
+		Y[a][0] = 1.0f; //will never change again; so, do it here for once
+	}
+	float** V = new float*[K], //Kx4, e.g. row7 = [1, 40, 45, 48] (1st col always 1) V = initial mesh1.coords and used only for qr & F[][]
+		** Vc = new float*[K]; //copy of V, which will not be modified by mtrxInv() and therefore usable inside the annealing loop
+	for (int a = 0; a < K; a++)
+	{
+		V[a] = new float[4];
+		Vc[a] = new float[3]; //no need to keep [0] = 1 for Vc
+		V[a][0] = 1.0f;
+		for (int c = 1; c < 4; c++)
+		{
+			V[a][c] = pntSet1[a]->coords[c - 1];
+			Vc[a][c - 1] = V[a][c]; //so, Vc[7] is the coords of m1.baseVerts7
+		}
+	}
+
+	//KxK F (phi, or kernel) mtrx, constant through annealing
+	float** F = new float*[K];
+	for (int a = 0; a < K; a++)
+	{
+		F[a] = new float[K]; //F[a][c] = dist between V[c] & V[a]
+		for (int c = 0; c < K; c++)
+			F[a][c] = -sqrt((V[c][1] - V[a][1])*(V[c][1] - V[a][1]) + (V[c][2] - V[a][2])*(V[c][2] - V[a][2]) + (V[c][3] - V[a][3])*(V[c][3] - V[a][3])); //[*][0] = 1, so no effect
+	}
+
+	//QR-decompose V to fetch Q1, Q2, R (same for all iterations) to be used in computation of transformation f = (d, w) below
+	MtrxOps* mtrx = new MtrxOps();
+	float* tau = mtrx->rmatrixqr(V, K, 4); //V is also updated via call-by-ref
+	//get KxK Q
+	float** Q = mtrx->rmatrixqrunpackq(V, K, 4, tau, K); //last K: i want first K, i.e. all, columns of Q
+	//orthonormal = orthogonal (perpendicular) + normal (magnitude 1); so, turn orthogonal vectors of Q into orthonormal basis
+	for (int ac = 0; ac < K; ac++) //i guess qr.rmatrixqrunpackq returns Q already normalized but be safe
+	{
+		float len = 0.0f;
+		for (int ar = 0; ar < K; ar++) //find normalizer
+			len += Q[ar][ac] * Q[ar][ac];
+		len = sqrt(len);
+		for (int ar = 0; ar < K; ar++) //normalize
+			Q[ar][ac] /= len;
+	}
+	//get Kx4 RR
+	float** RR = mtrx->rmatrixqrunpackr(V, K, 4);
+
+	//get Q1 & Q2 from KxK Q (also keep their transposes)
+	float** Q1 = new float*[K]; //Kx4, where 4 = D+1, where D = 3, i.e. 3D pnts
+	for (int a = 0; a < K; a++)
+	{
+		Q1[a] = new float[4];
+		for (int c = 0; c < 4; c++)
+			Q1[a][c] = Q[a][c];
+	}
+	float** Q2 = new float*[K]; //Kx(K-4), where 4 = D+1, where D = 3, i.e. 3D pnts
+	for (int a = 0; a < K; a++)
+	{
+		Q2[a] = new float[K - 4];
+		for (int c = 0; c < K - 4; c++)
+			Q2[a][c] = Q[a][c + 4];
+	}
+	float** Q1t = new float*[4]; //4xK
+	for (int a = 0; a < 4; a++)
+	{
+		Q1t[a] = new float[K];
+		for (int c = 0; c < K; c++)
+			Q1t[a][c] = Q1[c][a];
+	}
+	float** Q2t = new float*[K - 4]; //(K-4)xK
+	for (int a = 0; a < K - 4; a++)
+	{
+		Q2t[a] = new float[K];
+		for (int c = 0; c < K; c++)
+			Q2t[a][c] = Q2[c][a];
+	}
+
+	//get 4x4 R from Kx4 RR (by omitting all-zero part below row 4)
+	float** R = new float*[4]; //4x4, where 4 = D+1, where D = 3, i.e. 3D pnts
+	for (int a = 0; a < 4; a++)
+	{
+		R[a] = new float[4];
+		for (int c = 0; c < 4; c++)
+			R[a][c] = RR[a][c];
+	}
+	float** Rt = new float*[4], //4x4 (transpose of R)
+		** RtR = new float*[4]; //4x4 (Rt * R)
+	for (int a = 0; a < 4; a++)
+	{
+		RtR[a] = new float[4];
+		Rt[a] = new float[4];
+		for (int c = 0; c < 4; c++)
+			Rt[a][c] = R[c][a];
+	}
+	mtrxMult(RtR, 4, 4, 4, 4, Rt, R);
+
+	//auxiliary matrices that holds temporary mtrxMult results
+	//constants ones for w computation
+	float** tmpK4K = new float*[K - 4]; //K-4xK mtrx
+	for (int i = 0; i < K - 4; i++)
+		tmpK4K[i] = new float[K];
+	float** tmpK4K4 = new float*[K - 4], ** tmpK4K4a = new float*[K - 4]; //K-4xK-4 mtrx
+	for (int i = 0; i < K - 4; i++)
+	{
+		tmpK4K4[i] = new float[K - 4];
+		tmpK4K4a[i] = new float[K - 4]; //lambda1 added version of tmpK4K, hence the name tmpK4K4a
+	}
+	float** tmpKK4 = new float*[K]; //KxK-4 mtrx
+	for (int i = 0; i < K; i++)
+		tmpKK4[i] = new float[K - 4];
+	float** gamma = new float*[K - 4]; //K-4x4 mtrx
+	for (int i = 0; i < K - 4; i++)
+		gamma[i] = new float[4];
+
+	mtrxMult(tmpK4K, K - 4, K, K, K, Q2t, F);
+	mtrxMult(tmpK4K4, K - 4, K, K, K - 4, tmpK4K, Q2);
+
+	//constants ones for d computation (to save time in the annealing loop)
+	float** RtQ1t = new float*[4]; //4xK
+	for (int a = 0; a < 4; a++)
+		RtQ1t[a] = new float[K];
+	mtrxMult(RtQ1t, 4, 4, 4, K, Rt, Q1t); //Rt * Q1t
+	float** FQ2 = new float*[K]; //KxK-4
+	for (int a = 0; a < K; a++)
+		FQ2[a] = new float[K - 4];
+	mtrxMult(FQ2, K, K, K, K - 4, F, Q2); //F * Q2
+	float** tmpK4 = new float*[K]; //Kx4
+	for (int a = 0; a < K; a++)
+		tmpK4[a] = new float[4]; //will hold FQ2*gamma in the annealing loop below
+	float** tmp44a = new float*[4], ** tmp44b = new float*[4]; //4x4
+	for (int a = 0; a < 4; a++)
+	{
+		tmp44a[a] = new float[4];
+		tmp44b[a] = new float[4]; //d = tmp44a * tmp44b
+	}
+
+	//desired transformation f = (w, d)
+	float** w = new float*[K]; //Kx4 mtrx
+	for (int i = 0; i < K; i++)
+		w[i] = new float[4];
+	float** d = new float*[4]; //4x4 mtrx
+	for (int i = 0; i < 4; i++)
+		d[i] = new float[4];
+
+	float lambda1, lambda2, lambda1_init = 1.0f, lambda2_init = lambda1_init * 0.01f;
+	//////////// outlier row/col handling ///////////////
+	float moutlier = (1.0f / sqrt(T0)) * pow(EXP, -1), *sy = new float[N];
+	for (int i = 0; i < N; i++) //all N columns (N+1'th column not updated (< N) 'cos never used anyway (lower-right corner of mtrx))
+		m[K][i] = moutlier;
+	for (int a = 0; a < K; a++) //all K rows (K+1'th row not updated 'cos never used anyway)
+		m[a][N] = moutlier; //these outlier values will never change again (MatLab code)
+	//////////// outlier row/col handling ends ///////////////
+	int nIters = 0;
+	float mse = INF, prevMSE; //loop terminator, minimum squared err between currently aligned pnt sets
+	float** prevCoords1 = new float*[K]; //previous coords of deforming pntSet1 in case i need to roll-back to them after loop below
+	for (int k = 0; k < K; k++)
+		prevCoords1[k] = new float[3];
+	while (true) //T >= Tfinal) //deterministic annealing iterations as long as T is hot/high enough
+	{
+		for (int iterT = 0; iterT < perT_maxit; iterT++)
+		{
+			//alternating update in 2 steps
+
+			//step1: update the correspondence (given transforming mesh1.coords and stable mesh2.coords, update m)
+			//the inner KxN part is updated
+			for (int a = 0; a < K; a++)
+			for (int i = 0; i < N; i++)
+			{
+				float top = -(pow(pntSet2[i]->coords[0] - pntSet1[a]->coords[0], 2.0f) +
+					pow(pntSet2[i]->coords[1] - pntSet1[a]->coords[1], 2.0f) +
+					pow(pntSet2[i]->coords[2] - pntSet1[a]->coords[2], 2.0f)) / (2 * T),
+					left = (1.0f / sqrt(T));
+				m[a][i] = left * pow(EXP, top);
+			}
+			//replacing outlier handling and normalization previously-above w/ the stuff from paper author's MatLab code
+			//% normalize accross the outliers as well:
+			for (int i = 0; i < N; i++)
+				sy[i] = 0.0f; //init sy
+			for (int i = 0; i < N; i++)
+			for (int r = 0; r <= K; r++) //include outlier row as well
+				sy[i] += m[r][i]; //fill sy, e.g. sy[7] = sum of elements (including outliers) in column7 of m
+			//the inner KxN part is normalized by sy
+			for (int a = 0; a < K; a++)
+			for (int i = 0; i < N; i++)
+				m[a][i] /= sy[i];
+
+			//step2: update the transformation (f = (d, w))
+			//update all K entries of Y
+			for (int a = 0; a < K; a++)
+			{
+				float est[3] = { 0.0f, 0.0f, 0.0f };
+				for (int i = 0; i < N; i++)
+				{
+					est[0] += m[a][i] * pntSet2[i]->coords[0];
+					est[1] += m[a][i] * pntSet2[i]->coords[1];
+					est[2] += m[a][i] * pntSet2[i]->coords[2];
+				}
+					
+				for (int c = 1; c < 4; c++)
+					Y[a][c] = est[c - 1]; //Y[*][0] = 1 set above and stays as is
+				//so, Y[a] can be regarded as a mixture of mesh2 coords that corresponds to mesh1.baseVerts[a]
+			}
+
+			//new annealing parameters that'll affect matrices below
+			lambda1 = lamda1_init * K * T;	lambda2 = lamda2_init * K * T; //these (big tmpK4K4a diagonals)
+			//lambda1 = lamda1_init * T;		lambda2 = lamda2_init * T; //or these? (smaller diagonals for tmpK4K4a)
+
+			//compute w
+			for (int a = 0; a < K - 4; a++)
+			for (int c = 0; c < K - 4; c++)
+				tmpK4K4a[a][c] = tmpK4K4[a][c] + (a == c ? lambda1 : 0.0f); //lambda1 added version of tmpK4K4
+			/*FILE* fPtr2;
+			if (iterT == perT_maxit-1){
+			fPtr2 = fopen("invinput.dat", "w");
+			for (int a = 0; a < K-4; a++) for (int i = 0; i < K-4; i++) fprintf(fPtr2, "%f%s", tmpK4K4a[a][i], (i == K-5 ? ";\n" : ", ")); fclose(fPtr2);
+			}*/
+			mtrx->mtrxInv(tmpK4K4a, K - 4); //tmpK4K4a = inv(tmpK4K4a) via call-by-ref
+			/*if (iterT == perT_maxit-1){
+			fPtr2 = fopen("invoutput.dat", "w");
+			for (int a = 0; a < K-4; a++) for (int i = 0; i < K-4; i++) fprintf(fPtr2, "%f%s", tmpK4K4a[a][i], (i == K-5 ? ";\n" : ", "));fclose(fPtr2);
+			}*/
+
+			mtrxMult(tmpK4K, K - 4, K - 4, K - 4, K, tmpK4K4a, Q2t);
+			mtrxMult(gamma, K - 4, K, K, 4, tmpK4K, Y); //K-4x4 gamma
+			mtrxMult(w, K, K - 4, K - 4, 4, Q2, gamma); //w = Q2 * gamma is ready now
+
+			//compute d
+			for (int a = 0; a < 4; a++)
+			for (int c = 0; c < 4; c++)
+				tmp44a[a][c] = RtR[a][c] + (a == c ? lambda2 : 0.0f); //lambda2 added version of RtR
+			mtrx->mtrxInv(tmp44a, 4); //tmp44a = inv(tmp44a) via call-by-ref
+			mtrxMult(tmpK4, K, K - 4, K - 4, 4, FQ2, gamma); //FQ2 * gamma
+			for (int a = 0; a < K; a++)
+			for (int c = 0; c < 4; c++)
+				tmpK4[a][c] = Y[a][c] - tmpK4[a][c]; //tmpK4 = Y - tmpK4 effect
+			mtrxMult(tmp44b, 4, K, K, 4, RtQ1t, tmpK4);
+			for (int a = 0; a < 4; a++)
+			for (int c = 0; c < 4; c++)
+				tmp44b[a][c] -= RtR[a][c]; //tmp44b = tmp44b - RtR effect
+			mtrxMult(d, 4, 4, 4, 4, tmp44a, tmp44b);
+			for (int a = 0; a < 4; a++)
+			for (int c = 0; c < 4; c++)
+			if (a == c)
+				d[a][c] += 1.0f; //1 added version of d (off-diagonal entries are already set by 'mtrxMult(d, ..' above)
+
+			//remember previous values before starting to change them to current values (in case i roll-back after outer while-loop)
+			prevMSE = mse;
+
+			//apply transformation to mesh1.coords (which will affect m -> Y -> gamma -> d -> w (effect-chain) in next iteration)
+			mtrxMult(tmpK4, K, K, K, 4, F, w); //F*w is added to affine-transformed coords below, i.e. after d-transformation
+			for (int bv = 0; bv < K; bv++)
+			{
+				prevCoords1[bv][0] = pntSet1[bv]->coords[0]; //remember previous values before starting to change them to current values (in case i roll-back after outer while-loop)
+				prevCoords1[bv][1] = pntSet1[bv]->coords[1];
+				prevCoords1[bv][2] = pntSet1[bv]->coords[2];
+
+				//apply affine transformation d
+				float n1 = d[0][0] + Vc[bv][0] * d[1][0] + Vc[bv][1] * d[2][0] + Vc[bv][2] * d[3][0]; //Vc[*][0] = x, [1] = y, [2] = z
+				pntSet1[bv]->coords[0] = d[0][1] + Vc[bv][0] * d[1][1] + Vc[bv][1] * d[2][1] + Vc[bv][2] * d[3][1];
+				pntSet1[bv]->coords[1] = d[0][2] + Vc[bv][0] * d[1][2] + Vc[bv][1] * d[2][2] + Vc[bv][2] * d[3][2];
+				pntSet1[bv]->coords[2] = d[0][3] + Vc[bv][0] * d[1][3] + Vc[bv][1] * d[2][3] + Vc[bv][2] * d[3][3];
+				//apply warping coefficient matrix w (actually tmpK4 = F*w is applied)
+				float n2 = tmpK4[bv][0];
+				pntSet1[bv]->coords[0] += tmpK4[bv][1];
+				pntSet1[bv]->coords[1] += tmpK4[bv][2];
+				pntSet1[bv]->coords[2] += tmpK4[bv][3];
+				/*				float wn = n1+n2;
+				if (wn != 1) //never entering this if-block, which is good
+				{
+				cout << wn << " != 1; do homogenous normalization?\n"; //by dividing coords by wn?
+				pntSet1[bv]->coords /= wn; //never coming here :)
+				}*/
+			} //end of bv
+
+			/*//new center of masses to be used as outlier cluster centers below (m2 not change)
+			sum = SbVec3f(0.0f, 0.0f, 0.0f);
+			for (int bv = 0; bv < K; bv++)
+			sum += pntSet1[bv]->coords;
+			m1 = sum / (float) K; //???????? i guess should not be here*/
+		} //end of perT_maxit
+
+		//gradually decrease temperature; when it is cold enough, i.e. T ~ 0, fuzzy m will be desired binary correspondence mtrx
+		T = T * anneal_rate;
+		
+
+		//compute new mse value as an iteration condition
+		mse = computeMSEe(pntSet1, pntSet2);
+
+		cout << "T = " << T << ", lambda1 = " << lambda1 << ", lambda2 = " << lambda2 <<", mse= "<< mse << "\n"; //"\n";
+
+		if (nIters++ > 20000 || (nIters > 5000 && mse > prevMSE)) //|| T < 167 is good for k = 101 of frontiers[k])
+			break;				//nIters > 10 is to skip a possible mse > prevMSE case in the beginning phase
+		//for k = 127, 128, 129, it was not enough to use 10; maby 20?
+	} //end of while (true)
+
+	if (nIters > 2 && mse > prevMSE) //then need to use prevCoords to roll-back to that prevMSE
+	{
+		cout << "rolling back to coords of mse = " << prevMSE << endl;
+		for (int bv = 0; bv < K; bv++)
+		{
+			pntSet1[bv]->coords[0] = prevCoords1[bv][0]; //roll-back
+			pntSet1[bv]->coords[1] = prevCoords1[bv][1]; //roll-back
+			pntSet1[bv]->coords[2] = prevCoords1[bv][2]; //roll-back
+		}
+			
+	}
+
+	//FILE* fPtr = fopen("t0.dat", "a"); //see which T0 gave the best/min mse
+	float mseUsed = (mse > prevMSE ? prevMSE : mse);
+	//fprintf(fPtr, "%d\t%f\t\t%f\t\t%f\t\t%s\n", k, T0, initialMSE, mseUsed, (mseUsed < minMSE ? "min" : ""));
+	if (mseUsed < minMSE) minMSE = mseUsed;
+	//fclose(fPtr);
+
+	//memo re-capture
+	delete[] denomR;
+	delete[] denomC;
+	delete[] sy;
+	delete[] prevCoords1;
+	delete mtrx;
+	for (int i = 0; i < K; i++) delete[] Y[i]; delete[] Y;
+	for (int a = 0; a < K; a++) delete[] V[a]; delete[] V;
+	for (int a = 0; a < K; a++) delete[] Vc[a]; delete[] Vc;
+	for (int a = 0; a < K; a++) delete[] Q[a]; delete[] Q;
+	for (int a = 0; a < K; a++) delete[] RR[a]; delete[] RR;
+	for (int a = 0; a < K; a++) delete[] Q1[a]; delete[] Q1;
+	for (int a = 0; a < K; a++) delete[] Q2[a]; delete[] Q2;
+	for (int a = 0; a < 4; a++) delete[] R[a]; delete[] R;
+	for (int a = 0; a < K; a++) delete[] F[a]; delete[] F;
+	for (int a = 0; a < K - 4; a++) delete[] tmpK4K[a]; delete[] tmpK4K;
+	for (int a = 0; a < K - 4; a++) delete[] tmpK4K4[a]; delete[] tmpK4K4;
+	for (int a = 0; a < K - 4; a++) delete[] tmpK4K4a[a]; delete[] tmpK4K4a;
+	for (int a = 0; a < K; a++) delete[] tmpKK4[a]; delete[] tmpKK4;
+	for (int a = 0; a < 4; a++) delete[] tmp44a[a]; delete[] tmp44a;
+	for (int a = 0; a < 4; a++) delete[] tmp44b[a]; delete[] tmp44b;
+	for (int a = 0; a < K - 4; a++)	delete[] gamma[a]; delete[] gamma;
+	for (int a = 0; a < 4; a++) delete[] Q1t[a]; delete[] Q1t;
+	for (int a = 0; a < K - 4; a++) delete[] Q2t[a]; delete[] Q2t;
+	for (int a = 0; a < K; a++) delete[] tmpK4[a]; delete tmpK4;
+	for (int a = 0; a < 4; a++) delete[] Rt[a]; delete[] Rt;
+	for (int a = 0; a < K; a++) delete[] FQ2[a]; delete[] FQ2;
+	for (int a = 0; a < 4; a++) delete[] RtQ1t[a]; delete[] RtQ1t;
+	for (int a = 0; a < K; a++) delete[] w[a]; delete[] w;
+	for (int a = 0; a < 4; a++) delete[] d[a]; delete[] d;
+	//////////// TPS-RPM algo ends ////////////
+
+	//cout << "Done! after " << nIters-1 << " TPS-RPM iterations; final mse: " << mse << "\n\n";
+	cout << "Done!\n\n";
+	return mse;
+
+
+}
+
+
+
+
+
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////CONTOUR FEATURES///////////////////////////////////////////////////////////
@@ -3247,9 +3789,14 @@ int* distHist(vector<Vertex*> contourPoints, int index){
 
 	
 	float mean = 0;
+	float min = 999999999999;
 	for (int i = 0; i < n; i++){
 		dists[i] = sqrt(dist2Between(contourPoints[index]->coords, contourPoints[i]->coords));
 		mean += dists[i];
+
+		if (dists[i] < min)
+			min = dists[i];
+
 		//cout << dists[i] << endl;
 
 	}
@@ -3257,7 +3804,7 @@ int* distHist(vector<Vertex*> contourPoints, int index){
 	mean /= n;
 
 	for (int i = 0; i < n; i++)
-		dists[i] -= mean;
+		dists[i] -= min;
 
 	
 	float stdDev = 0;
@@ -3271,11 +3818,16 @@ int* distHist(vector<Vertex*> contourPoints, int index){
 	for (int i = 0; i < n; i++)
 		dists[i] /= stdDev;
 
-	
+	float maxd = 0;
+	for (int i = 0; i < n; i++)
+		if (dists[i] > maxd)
+			maxd = dists[i];
+
+	float h = maxd / 20.;
 	//cout << "------------------------------------------\n";
 	for (int i = 0; i < n; i++){
 		//cout << dists[i] << endl;
-		int ind = dists[i] / 0.2 + 10;
+		int ind = dists[i] /0.2;
 		if (ind < 0)
 			ind = 0;
 		if (ind>19)
@@ -3301,6 +3853,9 @@ int* angleHist(vector<Vertex*> contourPoints, int index){
 	float meanx = 0;
 	float meany = 0;
 	float meanz = 0;
+	float minx = 999999;
+	float miny = 999999;
+	float minz = 999999;
 
 	for (int i = 0; i < n; i++){
 
@@ -3332,7 +3887,14 @@ int* angleHist(vector<Vertex*> contourPoints, int index){
 		meany += angles[3*i+1];
 		meanz += angles[3*i+2];
 
+		if (minx > angles[3 * i])
+			minx = angles[3 * i];
 
+		if (miny > angles[3 * i + 1])
+			minx = angles[3 * i + 1];
+
+		if (minz > angles[3 * i + 2])
+			minz = angles[3 * i + 2];
 
 		//cout << angles[i] << " " << angles[i+1] << " " << angles[i+2] << " ";
 
@@ -3345,27 +3907,83 @@ int* angleHist(vector<Vertex*> contourPoints, int index){
 
 	for (int i = 0; i < n; i++){
 
-		angles[i] -= meanx;
-		angles[i+1] -= meany;
-		angles[i+2] -= meanz;
+		angles[ 3*i] -= meanx;
+		angles[3*i + 1] -= meany;
+		angles[ 3*i + 2] -= meanz;
 	}
+
+	float maxx = 0;
+	float maxy = 0;
+	float maxz = 0;
+
+	for (int i = 0; i < n; i++){
+
+		if (maxx < angles[3 * i])
+			maxx = angles[3 * i];
+
+		if (maxy < angles[3 * i + 1])
+			maxy = angles[3 * i + 1];
+
+		if (maxz < angles[3 * i + 2])
+			maxz = angles[3 * i + 2];
+	}
+
 
 	float hsize = M_PI / 20.;
 
-	for (int i = 0; i < 3*n; i++){
-		//cout << angles[i] << endl;
-		int ind = angles[i] / hsize ;
-		if (ind < 0)
-			ind = 0;
-		if (ind>19)
-			ind = 19;
+	/*float hx = maxx / 20.;
+	float hy = maxy / 20.;
+	float hz = maxz / 20.;*/
 
-		int ind2 = i % 3;
-		hist[20*ind2 + ind]++;
+
+	for (int i = 0; i < n; i++){
+		//cout << angles[i] << endl;
+
+		int indx = angles[3 * i] / hsize + 10 ;
+		if (indx < 0)
+			indx = 0;
+		if (indx>19)
+			indx = 19;
+
+		int indy = angles[3 * i + 1] / hsize +10;
+		if (indy < 0)
+			indy = 0;
+		if (indy>19)
+			indy = 19;
+
+		int indz = angles[3 * i + 2] / hsize +10;
+		if (indz < 0)
+			indz = 0;
+		if (indz>19)
+			indz = 19;
+
+		
+		hist[indx]++;
+		hist[20+indy]++;
+		hist[40+indz]++;
 
 	}
 
 	return hist;
+}
+
+float* consecutivePointFeature(vector<Vertex*> contourPoints){
+
+	float* featureVector = new float[3*contourPoints.size()];
+
+	int i = 0;
+	for (; i < contourPoints.size()-1; i++)
+	{
+		featureVector[3 * i]   = (contourPoints[i]->coords[0] - contourPoints[i + 1]->coords[0]);
+		featureVector[3 * i+1] = (contourPoints[i]->coords[1] - contourPoints[i + 1]->coords[1]);
+		featureVector[3 * i+2] = (contourPoints[i]->coords[2] - contourPoints[i + 1]->coords[2]);
+	}
+
+	featureVector[3 * i]     = (contourPoints[i]->coords[0] - contourPoints[0]->coords[0]);
+	featureVector[3 * i + 1] = (contourPoints[i]->coords[1] - contourPoints[0]->coords[1]);
+	featureVector[3 * i + 2] = (contourPoints[i]->coords[2] - contourPoints[0]->coords[2]);
+
+	return featureVector;
 }
 
 vector<int**> extractContourFeatures(Mesh *face, vector<vector<int>> faceParts){
@@ -3450,12 +4068,48 @@ vector<int**> extractContourFeatures(Mesh *face, vector<vector<int>> faceParts){
 	return partHists;
 }
 
+
+vector<float*> extractContourFeatures2(Mesh *face, vector<vector<int>> faceParts){
+
+	vector<float*> partHists;
+
+	for (int i = 0; i < faceParts.size(); i++){
+
+
+		vector<Vertex*> contourPoints;
+
+		for (int j = 0; j < faceParts[i].size(); j++){
+
+			contourPoints.push_back(face->verts[faceParts[i][j]]);
+
+		}
+
+		vector<Vertex*> newPoints = completeContour(contourPoints);
+
+
+
+		float* f= consecutivePointFeature(newPoints);
+
+		
+		partHists.push_back(f);
+
+	}
+
+	return partHists;
+}
+
 float distContourFeatures(int* f1, int* f2){
 
 	float cost = 0;
 
 	for (int k = 0; k < 80; k++)
-		cost += (f1[k] - f2[k]) * (f1[k] - f2[k]);
+	{
+		if (k < 20)
+			cost += 1.9*(f1[k] - f2[k]) * (f1[k] - f2[k]);
+		else
+			cost += 0.1*(f1[k] - f2[k]) * (f1[k] - f2[k]);
+	}
+	
 
 	cost = sqrt(cost);
 	cost /= 80;
@@ -3495,6 +4149,7 @@ float matchContour(int** hist1, int** hist2){
 
 }
 
+
 float matchFaceParts(vector<int**> f1, vector<int**> f2){
 
 	float cost = 0;
@@ -3505,6 +4160,18 @@ float matchFaceParts(vector<int**> f1, vector<int**> f2){
 
 	return cost;
 
+}
+
+float matchFaceParts(float* f1, float* f2){
+
+	float temp= 0;
+
+	for (int j = 0; j < NUM_CONTOUR_POINTS; j++)
+	{
+		temp += (f1[j] - f2[j]) * (f1[j] - f2[j]);
+	}
+
+	return sqrt(temp);
 }
 
 
@@ -4280,6 +4947,71 @@ float cutDiscrepancy(Mesh* mesh, vector<int> segments1, vector<int> segments2){
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int main()
 {
+
+
+
+
+	Mesh* face1 = new Mesh();
+	face1->loadOff("faces\\testface1.off");
+
+	Mesh* face2 = new Mesh();
+	face2->loadOff("faces\\face1.off");
+
+	
+	int i = 0;
+
+	vector<Vertex*> contourPoints1;
+	for (int j = 0; j < faceParts[i].size(); j++){
+
+		contourPoints1.push_back(face1->verts[faceParts[i][j]]);
+	}
+
+	vector<Vertex*> newPoints1 = completeContour(contourPoints1);
+
+
+	vector<Vertex*> contourPoints2;
+	for (int j = 0; j < faceParts[i].size(); j++){
+
+		contourPoints2.push_back(face2->verts[faceParts[i][j]]);
+	}
+
+	vector<Vertex*> newPoints2 = completeContour(contourPoints2);
+
+	
+	ofstream f1;
+	f1.open("1.xyz");
+
+	for (int j = 0; j < newPoints1.size(); j++){
+
+		f1 << newPoints1[j]->coords[0] << " " << newPoints1[j]->coords[1] << " " << newPoints1[j]->coords[2] << endl;
+	}
+	f1.close();
+
+
+	ofstream f2;
+	f2.open("2.xyz");
+
+	for (int j = 0; j < newPoints2.size(); j++){
+
+		f2 << newPoints2[j]->coords[0] << " " << newPoints2[j]->coords[1] << " " << newPoints2[j]->coords[2] << endl;
+	}
+	f2.close();
+
+
+	nonRigidAlignment(contourPoints1, contourPoints2);
+
+
+	ofstream f3;
+	f3.open("1_modified.xyz");
+
+	for (int j = 0; j < newPoints1.size(); j++){
+
+		f3 << newPoints1[j]->coords[0] << " " << newPoints1[j]->coords[1] << " " << newPoints1[j]->coords[2] << endl;
+	}
+	f3.close();
+
+	getchar();
+	return 5;
 	srand(time(NULL));
 	faceNo = 3;
 	name = "initial";

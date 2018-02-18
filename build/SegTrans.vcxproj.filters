@@ -51,6 +51,9 @@
     <ClInclude Include="..\FibonacciHeap.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\MtrxOps.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="SegTrans.rc" />

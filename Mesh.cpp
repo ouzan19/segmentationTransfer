@@ -598,18 +598,26 @@ void Mesh::addEdge(int a, int b,int tid)
 {
 	int idx = edges.size();
 	int index = -1;
-	for (int i = 0; i < edges.size(); i++){
+	/*for (int i = 0; i < edges.size(); i++){
 
 		if (((edges[i]->v1i == a) && (edges[i]->v2i == b)) || ((edges[i]->v1i == b) && (edges[i]->v2i == a)))
 			index = i;
 
-	}
+	}*/
+
+	auto it = edgeMap.find(std::make_pair(a, b));
+	auto it2 = edgeMap.find(std::make_pair(b, a));
+	if (it != edgeMap.end())
+		index = it->second;
+	else if (it2 != edgeMap.end())
+		index = it2->second;
 
 	if (index != -1){
 
 		if (tid != -1)
 			edges[index]->tris.push_back(tid);
 
+		edgeMap[std::make_pair(a, b)] = idx;
 		edges.push_back(edges[index]);
 
 	}
@@ -620,7 +628,9 @@ void Mesh::addEdge(int a, int b,int tid)
 		if (tid != -1)
 			e->tris.push_back(tid);
 
+		edgeMap[std::make_pair(a, b)] = idx;
 		edges.push_back(e);
+		
 	}
 
 	verts[a]->edgeList.push_back(idx);
