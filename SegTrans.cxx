@@ -113,7 +113,9 @@ vtkSmartPointer<vtkScalarBarActor> scalarBar;
 //vector<int>  mouthPoints = { 553, 2239, 552, 4642, 559, 2252, 558, 4868, 4867, 4915, 4916, 5188, 3423, 3053, 936, 3067, 943, 3069, 944, 1850, 1854, 375, 1840, 377, 2767, 802, 3957, 1164, 4378, 1849, 3143, 3171, 4375, 3117, 3114, 3115, 4909, 4910, 6121, 4958, 4934, 2248, 6124, 1685, 5712, 5603, 5602 ,553};
 //vector<int>   nosePoints  = { 4988, 5480, 5481, 5485, 5474, 5473, 5475, 5564, 5562, 5561, 5395, 5394, 2541, 2539, 2540, 4624, 4626, 5400, 5397, 5396, 5399, 4590, 4588, 4592, 5159, 3382, 3381, 2787, 2786, 2789, 3819, 3636, 3635, 3638, 3639, 2824, 2823, 2135, 2132, 500, 2812, 828, 2846, 845, 3805, 1116, 3631, 760, 2697, 763, 3034, 364, 3036, 361, 1807, 4988 };
 
-
+std::string facesDirectory ="body100";
+int numFaces = 10;
+int numTestFaces = 2;
 vector<int>  mouthPoints = { 4749,4874,5000,5512,6024,6538,7054,7699,8215,8602,9118,9892,10408,10799,11062,11325,11585,11201,10308,9793,9148,8374,7600,7084,6437,5919,5400 ,4749};
 vector<int>   eye1 = {2088,2478,2865,3124,3385,3772,4159,4545,4932,5320,5706,6091,6215,5954,5567,5180,4790,4403,4016,3758,3371,2985,2599,2214,2088 };
 vector<int>   nosePoints = { 6981,6986,6993,7000,7011,7019,7026,6252,5607,5614,5749,5751,6525,7170,7815,8718,9621,10653,10907,11158,11026,9736,9731,9725,9719,9711,9705,9699,9692,9689,8915,8272,7759,6981};
@@ -145,9 +147,9 @@ float cutDiscrepancy(Mesh* mesh, vector<int> segments1, vector<int> segments2);
 
 vector<vector<int>> completeContoursByGeodesic(Mesh* cF, vector<vector<int>> inFaceParts);
 vector<vector<int>> findInnerContourVertices(Mesh* cF, vector<vector<int>> inFaceParts);
-vector<int**> extractContourFeatures(Mesh *face, vector<vector<int>> faceParts);
-float matchFaceParts(vector<int**> f1, vector<int**> f2);
-float matchContour(int**, int**);
+vector<float**> extractContourFeatures(Mesh *face, vector<vector<int>> faceParts);
+float matchFaceParts(vector<float**> f1, vector<float**> f2);
+float matchContour(float**, float**);
 
 float triangleArea(vector<Vertex*> vertices, std::vector<int> hole, int v0, int v1, int v2);
 float holeCostFunc(vector<Vertex*> vertices, std::vector<int> hole, int i, int k, vector<int> &lamda);
@@ -680,9 +682,9 @@ void alignDatabase(){
 	/*averageFace = new Mesh();
 
 	if(!pointCloudMode)
-		averageFace->loadOff("faces\\face1.off");
+		averageFace->loadOff(facesDirectory+"\\face1.off");
 	else 
-		averageFace->loadxyz("faces\\face1.xyz");
+		averageFace->loadxyz(facesDirectory+"\\face1.xyz");
 	*/
 	//s = averageFace->calculateScale();
 
@@ -690,12 +692,12 @@ void alignDatabase(){
 	Mesh *initialFace = new Mesh();
 
 	if (!pointCloudMode)
-		initialFace->loadOff("faces\\face1.off");
+		initialFace->loadOff(facesDirectory+"\\face1.off");
 	else
-		initialFace->loadxyz("faces\\face1.xyz");
+		initialFace->loadxyz(facesDirectory+"\\face1.xyz");
 	*/
 
-	ofstream of("faces\\corr1.txt");
+	ofstream of(facesDirectory+"\\corr1.txt");
 
 	for (int i = 0; i < initialFace->verts.size(); i++)
 		of << i << std::endl;
@@ -704,11 +706,11 @@ void alignDatabase(){
 
 
 	int i = 2;
-	string s1 = "faces\\face";
-	string s2 = "faces\\corr";
-	string s3 = "faces\\deformed";
-	string s4 = "faces\\coarse";
-	string s5 = "faces\\fine";
+	string s1 = facesDirectory+"\\face";
+	string s2 = facesDirectory+"\\corr";
+	string s3 = facesDirectory+"\\deformed";
+	string s4 = facesDirectory+"\\coarse";
+	string s5 = facesDirectory+"\\fine";
 	
 	float tt = 0;
 
@@ -716,12 +718,12 @@ void alignDatabase(){
 		std::cout << "			" << face << std::endl;
 		averageFaceTemp = new Mesh();
 		if (!pointCloudMode)
-			averageFaceTemp->loadOff("faces\\face1.off");
+			averageFaceTemp->loadOff(facesDirectory+"\\face1.off");
 		else
-			averageFaceTemp->loadxyz("faces\\face1.xyz");
+			averageFaceTemp->loadxyz(facesDirectory+"\\face1.xyz");
 
 		//averageFaceTemp->scale(0.001);
-		//averageFaceTemp->write("faces\\scaled1.off");
+		//averageFaceTemp->write(facesDirectory+"\\scaled1.off");
 		//averageFaceTemp->initialize();
 		
 
@@ -749,9 +751,9 @@ void alignDatabase(){
 			mesh->loadxyz((char*)path.c_str());
 		
 		//mesh->scale(0.001);
-		//mesh->write((char*)("faces\\scaled" + to_string(face) + ".off").c_str());
+		//mesh->write((char*)(facesDirectory+"\\scaled" + to_string(face) + ".off").c_str());
 		/*
-		string path6 = "faces\\face" + to_string(face) + ".xyz";
+		string path6 = facesDirectory+"\\face" + to_string(face) + ".xyz";
 		ofstream fp;
 		fp.open(path6);
 		fp << mesh->verts.size() << endl;
@@ -1091,7 +1093,8 @@ public:
 			std::cout << "current color  "<<c << std::endl;
 		}	
 
-		if (key == "s"){
+		if (key == "s")
+		{
 			/*
 			int prevCount =0 ;
 			while (true){
@@ -1198,14 +1201,68 @@ public:
 			cube->GetPointData()->GetScalars()->Modified();
 			this->GetInteractor()->GetRenderWindow()->Render();
 			*/
+			ofstream off("segmented3.xyz");
+			for (int i = 0; i < segments.size(); i++)
+			{
+				vtkPoints* points = currPolyData->GetPoints();
+				double coords[3];
+				points->GetPoint(i, coords);
+
+				off << coords[0] << " " << coords[1] << " " << coords[2] << " ";
+
+				int sid = segments[i];
 
 
+				if (sid == 0)
+				{
+					off << "0 0 0\n";
+				}
+
+				else if (sid == 1)
+				{
+					off << "255 255 0\n";
+				}
+
+				else if (sid == 2)
+				{
+					off << "255 0 255\n";
+				}
+
+				else if (sid == 3)
+				{
+					off << "0 255 255\n";
+				}
+
+				else if (sid == 4)
+				{
+					off << "0 255 0\n";
+				}
+				
+				else if (sid == 5)
+				{
+					off << "0 0 255\n";
+				}
+
+				else if (sid == 6)
+				{
+					off << "255 0 0\n";
+				}
+				
+				else
+				{
+					off << "255 255 255\n";
+				}
+				
+
+			}
+
+			off.close();
 		}
 
 		if (key == "m"){
 		
 			int i = 8;
-			string meshPath = "faces\\face" + to_string(i) + ".off";
+			string meshPath = facesDirectory+"\\face" + to_string(i) + ".off";
 			input = new Mesh();
 			input->loadOff((char*)meshPath.c_str());
 			input->assignNormalsToTriangles();
@@ -1331,9 +1388,9 @@ public:
 
 			string path;
 			if (!pointCloudMode)
-				path = "faces\\face" + std::to_string(faceNo+1) + ".off";
+				path = facesDirectory+"\\face" + std::to_string(faceNo+1) + ".off";
 			else
-				path = "faces\\face" + std::to_string(faceNo+1) + ".xyz";
+				path = facesDirectory+"\\face" + std::to_string(faceNo+1) + ".xyz";
 
 			Mesh *currentFace = new Mesh();
 
@@ -1400,9 +1457,9 @@ public:
 			faceNo++;
 			string path;
 			if (!pointCloudMode)
-				path= "faces\\face" + std::to_string(faceNo) + ".off";
+				path= facesDirectory+"\\face" + std::to_string(faceNo) + ".off";
 			else
-				path = "faces\\face" + std::to_string(faceNo) + ".xyz";
+				path = facesDirectory+"\\face" + std::to_string(faceNo) + ".xyz";
 
 			Mesh *currentFace = new Mesh();
 
@@ -1435,7 +1492,7 @@ public:
 			int nVerts = face->GetPoints()->GetNumberOfPoints();
 			vtkDataArray * s = face->GetPointData()->GetScalars();
 
-			ifstream ff("faces\\corr"+to_string(faceNo)+".txt");
+			ifstream ff(facesDirectory+"\\corr"+to_string(faceNo)+".txt");
 			//ofstream fff("segmentation_" + name + "_" + to_string(faceNo) + ".txt");
 			int temp = segments.size();
 			//fff << "13" << std::endl;
@@ -1595,7 +1652,7 @@ public:
 
 					if (i == 4 || i==11)
 						continue;
-					string meshPath =  "faces\\face" + to_string(i) + ".off";
+					string meshPath =  facesDirectory+"\\face" + to_string(i) + ".off";
 					string outPath = "query\\out" + to_string(i) + ".xyz";
 					 input = new Mesh();
 					input->loadOff((char*) meshPath.c_str());
@@ -1693,7 +1750,7 @@ public:
 			
 			if (matchId != -1){
 				Mesh* bestFace = new Mesh();
-				bestFace->loadOff((char*)("faces\\face" + to_string(matchId) + ".off").c_str());
+				bestFace->loadOff((char*)(facesDirectory+"\\face" + to_string(matchId) + ".off").c_str());
 
 				ifstream ff;
 				ff.open("segmentation_" + name + "_" + to_string(matchId) + ".txt");
@@ -1739,9 +1796,9 @@ public:
 		
 			string path;
 			if (!pointCloudMode)
-				path =  "faces\\face" + std::to_string(faceNo) + ".off";
+				path =  facesDirectory+"\\face" + std::to_string(faceNo) + ".off";
 			else
-				path = "faces\\face" + std::to_string(faceNo) + ".xyz";
+				path = facesDirectory+"\\face" + std::to_string(faceNo) + ".xyz";
 
 			Mesh *currentFace = new Mesh();
 
@@ -1779,7 +1836,7 @@ public:
 			for (int i = 0; i < currentFace->verts.size(); i++)
 				s->SetTuple1(i, 360);
 
-			ifstream ff("faces\\corr" + to_string(1) + ".txt");
+			ifstream ff(facesDirectory+"\\corr" + to_string(1) + ".txt");
 
 			int temp = segments.size();
 			vector<int> corrs;
@@ -1904,9 +1961,9 @@ public:
 
 			string path;
 			if (!pointCloudMode)
-				path = "faces\\face" + std::to_string(faceNo) + ".off";
+				path = facesDirectory+"\\face" + std::to_string(faceNo) + ".off";
 			else
-				path = "faces\\face" + std::to_string(faceNo) + ".xyz";
+				path = facesDirectory+"\\face" + std::to_string(faceNo) + ".xyz";
 
 			Mesh *currentFace = new Mesh();
 
@@ -1941,7 +1998,7 @@ public:
 			int nVerts = face->GetPoints()->GetNumberOfPoints();
 			vtkDataArray * s = face->GetPointData()->GetScalars();
 
-			ifstream ff("faces\\corr" + to_string(faceNo) + ".txt");
+			ifstream ff(facesDirectory+"\\corr" + to_string(faceNo) + ".txt");
 
 			int temp = segments.size();
 			vector<int> corrs;
@@ -2049,13 +2106,13 @@ public:
 		if(key == "b"){
 
 			vector<vector<int**>> faceHists;
-			for(int i=1;i<=1000;i++){
+			for(int i=4600;i<=numFaces;i++){
 
 				string path;
 				if (!pointCloudMode)
-					path = "faces\\face" + std::to_string(i) + ".off";
+					path = facesDirectory+"\\face" + std::to_string(i) + ".off";
 				else
-					path = "faces\\face" + std::to_string(i) + ".xyz";
+					path = facesDirectory+"\\face" + std::to_string(i) + ".xyz";
 
 				Mesh *currentFace = new Mesh();
 
@@ -2064,29 +2121,10 @@ public:
 				else
 					currentFace->loadxyz((char*)path.c_str());
 
+				vector<vector<int>> correspondedFaceParts;
 				/*
-				int x = 200000  * ((i - 1) % 5);
-				int y = -200000 * ((i - 1) / 5);
 
-				currentFace->shiftMesh(x, y);
-				vtkPolyData *face;
-				//cube->Delete();
-				
-				face = currentFace->getVTKPolyData(!pointCloudMode);
-				
-				vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-				mapper->SetInputData(face);
-				mapper->SetScalarRange(0, 360);
-
-				vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-				actor->SetMapper(mapper);
-				actor->GetProperty()->SetPointSize(5);
-
-				renderer->AddActor(actor);
-				renderer->Modified();
-				*/
-
-				ifstream ff("faces\\corr" + to_string(1) + ".txt");
+				ifstream ff(facesDirectory+"\\corr" + to_string(1) + ".txt");
 				vector<int> corrs;
 				for (int j = 0; j < 53490; j++){
 
@@ -2097,7 +2135,7 @@ public:
 				}
 				ff.close();
 
-				vector<vector<int>> correspondedFaceParts;
+				
 
 				for (int j = 0; j < faceParts.size(); j++){
 
@@ -2116,11 +2154,13 @@ public:
 					correspondedFaceParts.push_back(temp);
 
 				}
+				*/
+				correspondedFaceParts = faceParts;
 
-				vector<int**> partHists;
+				vector<float**> partHists;
 				partHists = extractContourFeatures(currentFace, correspondedFaceParts);
 
-				ofstream hf("faces\\contourFeatures" + to_string(i) + ".txt");
+				ofstream hf(facesDirectory+"\\contourFeatures" + to_string(i) + ".txt");
 
 				hf << partHists.size() << " " << NUM_CONTOUR_POINTS << " " << 80 << endl;
 
@@ -2129,11 +2169,19 @@ public:
 					for (int p = 0; p < NUM_CONTOUR_POINTS; p++){
 
 						for (int q = 0; q < 80; q++)
-							hf << partHists[h][p][q] << " ";
+							hf << (int) partHists[h][p][q] << " ";
 
 						hf << endl;
 
 					}
+
+				
+					for (int q = 0; q < 8; q++)
+						hf << partHists[h][NUM_CONTOUR_POINTS][q] << " ";
+
+					hf << endl;
+					
+
 				}
 				hf.close();
 
@@ -2165,9 +2213,9 @@ public:
 
 			string path;
 			if (!pointCloudMode)
-				path = "faces\\face" + std::to_string(faceNo) + ".off";
+				path = facesDirectory+"\\face" + std::to_string(faceNo) + ".off";
 			else
-				path = "faces\\face" + std::to_string(faceNo) + ".xyz";
+				path = facesDirectory+"\\face" + std::to_string(faceNo) + ".xyz";
 
 			Mesh *currentFace = new Mesh();
 
@@ -2211,19 +2259,19 @@ public:
 			this->GetInteractor()->GetRenderWindow()->Render();
 
 
-			vector<int**> faceHist, referenceHist;
+			vector<float**> faceHist, referenceHist;
 			int numParts, numHists, lenHists;
 
-			ifstream f("faces\\contourFeatures" + to_string(faceNo) + ".txt");
+			ifstream f(facesDirectory+"\\contourFeatures" + to_string(faceNo) + ".txt");
 
 			f >> numParts >> numHists >> lenHists;
 
 			for (int i = 0; i < numParts; i++){
 
-				int** hist = new int*[numHists];
+				float** hist = new float*[numHists];
 				for (int j = 0; j < numHists; j++){
 
-					hist[j] = new int[lenHists];
+					hist[j] = new float[lenHists];
 					for (int k = 0; k < lenHists; k++){
 
 						int temp;
@@ -2239,16 +2287,16 @@ public:
 			f.close();
 
 
-			ifstream f2("faces\\contourFeatures1.txt");
+			ifstream f2(facesDirectory+"\\contourFeatures1.txt");
 
 			f2 >> numParts >> numHists >> lenHists;
 
 			for (int i = 0; i < numParts; i++){
 
-				int** hist = new int*[numHists];
+				float** hist = new float*[numHists];
 				for (int j = 0; j < numHists; j++){
 
-					hist[j] = new int[lenHists];
+					hist[j] = new float[lenHists];
 					for (int k = 0; k < lenHists; k++){
 
 						int temp;
@@ -2292,7 +2340,7 @@ public:
 		if (key == "f"){
 			
 			//Mesh* aface = new Mesh();
-			//aface->loadOff("faces\\face1.off");
+			//aface->loadOff(facesDirectory+"\\face1.off");
 			//aface->findNeighborhoodTriangles();
 			//completedFaceParts = completeContoursByGeodesic(aface, faceParts2);
 			//vector<vector<int>> innerPoints = findInnerContourVertices(aface, completedFaceParts);
@@ -2371,10 +2419,10 @@ public:
 			of.close();
 
 		
-			vector<int**> inputHist;
+			vector<float**> inputHist;
 			inputHist = extractContourFeatures(m, inputFaceParts);
 			/*
-			ofstream hf("faces\\InputContourFeatures.txt");
+			ofstream hf(facesDirectory+"\\InputContourFeatures.txt");
 
 			hf << partHists.size() << " " << NUM_CONTOUR_POINTS << " " << 80 << endl;
 
@@ -2399,19 +2447,19 @@ public:
 
 			for (int fn = 2; fn < 1000; fn++){
 
-				vector<int**> faceHist;
+				vector<float**> faceHist;
 				int numParts, numHists, lenHists;
 
-				ifstream f("faces\\contourFeatures" + to_string(fn) + ".txt");
+				ifstream f(facesDirectory+"\\contourFeatures" + to_string(fn) + ".txt");
 
 				f >> numParts >> numHists >> lenHists;
 
 				for (int i = 0; i < numParts; i++){
 
-					int** hist = new int*[numHists];
+					float** hist = new float*[numHists];
 					for (int j = 0; j < numHists; j++){
 
-						hist[j] = new int[lenHists];
+						hist[j] = new float[lenHists];
 						for (int k = 0; k < lenHists; k++){
 
 							int temp;
@@ -2447,7 +2495,7 @@ public:
 			}
 
 			Mesh* outFace = new Mesh();
-			outFace->loadOff("faces\\baseface.off");
+			outFace->loadOff("baseface.off");
 
 			for (int i = 0; i < faceParts.size(); i++){
 
@@ -2456,7 +2504,7 @@ public:
 				int fid = bestMatches[i];
 
 				Mesh* tempMesh = new Mesh();
-				tempMesh->loadOff((char*)("faces\\face" + to_string(fid) + ".off").c_str());
+				tempMesh->loadOff((char*)(facesDirectory+"\\face" + to_string(fid) + ".off").c_str());
 
 				vector<int> vList = innerPoints[i];
 
@@ -2566,20 +2614,24 @@ public:
 			
 			Mesh* testFace;
 
-			for (int tf = 1; tf < 2; tf++){
+			for (int tf = 1; tf < 25; tf++){
 				const clock_t begin_time = clock();
 				std::cout << tf << std::endl;
 				testFace = new Mesh();
 
 				int testFaceId = tf; // tf;// rand() % 100;
-				testFace->loadOff((char*)("faces\\testface" + to_string(testFaceId) + ".off").c_str());
-			
-				createInputFile(testFace, faceParts);
+				testFace->loadOff((char*)("testFaces\\testface" + to_string(testFaceId) + ".off").c_str());
+				
+				std::vector<std::vector<int>> currentFaceParts = faceParts;
+
+
+
+				createInputFile(testFace, currentFaceParts);
 
 				
 				vector<vector<int>> innerPoints = { {}, {}, {}, {}, {}, {}, {} };
 				int colors[53490];
-				std::ifstream f("faces\\segmented.xyz");
+				std::ifstream f("segmented.xyz");
 
 				for (int i = 0; i < 53490; i++){
 
@@ -2630,10 +2682,10 @@ public:
 				Mesh *m = new Mesh();
 				vector<vector<int>> inputFaceParts;
 				ifstream of("inputPoints.xyz");
-				for (int fp = 0; fp < faceParts.size(); fp++){
+				for (int fp = 0; fp < currentFaceParts.size(); fp++){
 
 					vector<int> facePart;
-					for (int p = 0; p < faceParts[fp].size(); p++){
+					for (int p = 0; p < currentFaceParts[fp].size(); p++){
 
 						float x, y, z;
 						of >> x >> y >> z;
@@ -2652,11 +2704,11 @@ public:
 				of.close();
 
 
-				vector<int**> inputHist;
+				vector<float**> inputHist;
 				inputHist = extractContourFeatures(m, inputFaceParts);
 
 
-				ofstream hf("faces\\contourFeatures_input" + to_string(testFaceId) + ".txt");
+				ofstream hf("testFaces\\contourFeatures_input" + to_string(testFaceId) + ".txt");
 
 				hf << inputHist.size() << " " << NUM_CONTOUR_POINTS << " " << 80 << endl;
 
@@ -2665,37 +2717,42 @@ public:
 					for (int p = 0; p < NUM_CONTOUR_POINTS; p++){
 
 						for (int q = 0; q < 80; q++)
-							hf << inputHist[h][p][q] << " ";
+							hf << (int) inputHist[h][p][q] << " ";
 
 						hf << endl;
 
 					}
+
+					for (int q = 0; q < 8; q++)
+						hf << inputHist[h][NUM_CONTOUR_POINTS][q] << " ";
+
+					hf << endl;
 				}
 				hf.close();
 
-				int numParts = faceParts.size();
+				int numParts = currentFaceParts.size();
 				int* bestMatches = new int[numParts];
 				float* minDists = new float[numParts];
 				for (int i = 0; i < numParts; i++)
-					minDists[i] = 999999999;
+					minDists[i] = 99999999999999999;
 				int numHists;
 				
 
-				for (int fn = 1; fn < 1000; fn++){
-
-					vector<int**> faceHist;
+				for (int fn = 1; fn < numFaces; fn++){
+					
+					vector<float**> faceHist;
 					int numParts, numHists, lenHists;
 
-					ifstream f("faces\\contourFeatures" + to_string(fn) + ".txt");
+					ifstream f(facesDirectory+"\\contourFeatures" + to_string(fn) + ".txt");
 
 					f >> numParts >> numHists >> lenHists;
 
 					for (int i = 0; i < numParts; i++){
 
-						int** hist = new int*[numHists];
+						float** hist = new float*[numHists];
 						for (int j = 0; j < numHists; j++){
 
-							hist[j] = new int[lenHists];
+							hist[j] = new float[lenHists];
 							for (int k = 0; k < lenHists; k++){
 
 								int temp;
@@ -2705,6 +2762,17 @@ public:
 							}
 						}
 
+						hist[numHists] = new float[8];
+						for (int k = 0; k < 8; k++){
+
+							float temp;
+							f >> temp;
+							hist[numHists][k] = temp;
+
+							//std::cout << k << "  " << hist[numHists][k] << std::endl;
+
+						}
+
 						faceHist.push_back(hist);
 					}
 
@@ -2712,8 +2780,9 @@ public:
 
 					for (int part = 0; part < numParts; part++){
 
+						
 						float dist = matchContour(faceHist[part], inputHist[part]);
-
+						
 						if (dist < minDists[part]){
 							minDists[part] = dist;
 							bestMatches[part] = fn;
@@ -2733,19 +2802,43 @@ public:
 				
 				Mesh* outFace = new Mesh();
 				Mesh* outFace2 = new Mesh();
-				outFace->loadOff("faces\\baseface.off");
-				outFace2->loadOff("faces\\baseface.off");
+				outFace->loadOff("baseface.off");
+				outFace2->loadOff("baseface.off");
 
 				vector<Mesh*> bestMatchFaces;
 
-				for (int i = 0; i < faceParts.size(); i++){
+
+				if (minDists[2] < minDists[3])
+				{
+					bestMatches[3] = bestMatches[2];
+					minDists[3] = minDists[2];
+				}
+				else
+				{
+					bestMatches[2] = bestMatches[3];
+					minDists[2] = minDists[3];
+				}
+
+				if (minDists[4] < minDists[5])
+				{
+					bestMatches[5] = bestMatches[4];
+					minDists[5] = minDists[4];
+				}
+				else
+				{
+					bestMatches[4] = bestMatches[5];
+					minDists[4] = minDists[5];
+				}
+
+
+				for (int i = 0; i < currentFaceParts.size(); i++){
 
 					cout << bestMatches[i] << " " << minDists[i] << endl;
 
 					int fid = bestMatches[i];
 
 					Mesh* tempMesh = new Mesh();
-					tempMesh->loadOff((char*)("faces\\face" + to_string(fid) + ".off").c_str());
+					tempMesh->loadOff((char*)(facesDirectory+"\\face" + to_string(fid) + ".off").c_str());
 
 					bestMatchFaces.push_back(tempMesh);
 
@@ -2781,7 +2874,7 @@ public:
 				}
 
 				
-				outFace->write((char*)("faces\\testface" + to_string(testFaceId) + "_out2.off").c_str());
+				outFace->write((char*)("testFaces\\testface" + to_string(testFaceId) + "_out2.off").c_str());
 
 				vector<int> innerPoints2;
 				for (int ii = 0; ii < innerPoints.size(); ii++)
@@ -2789,23 +2882,23 @@ public:
 					innerPoints2.push_back(innerPoints[ii][jj]);
 
 				vector<int> vertList;
-				for (int ii = 0; ii < faceParts.size(); ii++)
-				for (int jj = 0; jj < faceParts[ii].size(); jj++)
-					vertList.push_back(faceParts[ii][jj]);
+				for (int ii = 0; ii < currentFaceParts.size(); ii++)
+				for (int jj = 0; jj < currentFaceParts[ii].size(); jj++)
+					vertList.push_back(currentFaceParts[ii][jj]);
 
 				outFace2->initialize();
-				outFace2->deform(outFace, 10000, 5, innerPoints2);
+				outFace2->deform(outFace, 5000, 5, innerPoints2);
 				outFace2->shiftMesh(250000,0);
-				outFace2->write((char*)("faces\\testface" + to_string(testFaceId) + "_out.off").c_str());
+				outFace2->write((char*)("testFaces\\testface" + to_string(testFaceId) + "_out.off").c_str());
 
 
 				//outFace->shiftMesh(250000,0);
-				//outFace->write((char*)("faces\\testface" + to_string(testFaceId) + "_out2.off").c_str());
+				//outFace->write((char*)(facesDirectory+"\\testface" + to_string(testFaceId) + "_out2.off").c_str());
 
 				
 
 				//Mesh* partsOnly = outFace->getSubsetByVertices(innerPoints2);
-				//partsOnly->write((char*)("faces\\testface" + to_string(testFaceId) + "_out2.off").c_str());
+				//partsOnly->write((char*)(facesDirectory+"\\testface" + to_string(testFaceId) + "_out2.off").c_str());
 				std::cout << float(clock() - begin_time) / CLOCKS_PER_SEC << "  secs\n\n";
 
 				/*
@@ -2887,7 +2980,7 @@ vector<vector<int>> completeContoursByGeodesic(Mesh* cF, vector<vector<int>> inF
 	vector<vector<int>> outCompletedFaceParts;
 
 	//Mesh* cF = new Mesh();
-	//cF->loadOff("faces\\face2.off");
+	//cF->loadOff(facesDirectory+"\\face2.off");
 
 	float maxGeoDist = 0;
 	Dijsktra::DijsktraSP dsp;
@@ -3230,14 +3323,14 @@ vector<Vertex*> completeContour(vector<Vertex*> contourPoints){
 	return contourPoints;
 }
 
-int* distHist(vector<Vertex*> contourPoints, int index){
+float* distHist(vector<Vertex*> contourPoints, int index){
 
 	
 	int n = contourPoints.size();
 	float* dists = new float[n];
 	//float* angles = new float[3*n];
 
-	int* hist = new int[20];
+	float* hist = new float[20];
 	for (int i = 0; i < 20; i++)
 		hist[i] = 0;
 
@@ -3277,12 +3370,12 @@ int* distHist(vector<Vertex*> contourPoints, int index){
 	return hist;
 }
 
-int* angleHist(vector<Vertex*> contourPoints, int index){
+float* angleHist(vector<Vertex*> contourPoints, int index){
 
 	int n = contourPoints.size();
 	float* angles = new float[3 * n];
 
-	int* hist = new int[60];
+	float* hist = new float[60];
 	for (int i = 0; i < 60; i++){
 		hist[i] = 0;
 	}
@@ -3303,19 +3396,19 @@ int* angleHist(vector<Vertex*> contourPoints, int index){
 		//cout << dists[i] << endl;
 
 		if (dy == 0)
-			angles[3*i] = M_PI / 2;
+			angles[3*i] = M_PI;
 		else
-			angles[3*i] = atan(dx / dy) ;
+			angles[3 * i] = atan(dx / dy) + M_PI / 2;
 
 		if (dz == 0)
-			angles[3*i+1] = M_PI / 2;
+			angles[3*i+1] = M_PI;
 		else
-			angles[3*i + 1] = atan(dy / dz) ;
+			angles[3 * i + 1] = atan(dy / dz) + M_PI / 2;
 
 		if (dx == 0)
-			angles[3*i+2] = M_PI / 2;
+			angles[3*i+2] = M_PI;
 		else
-			angles[3*i + 2] = atan(dz / dx) ;
+			angles[3 * i + 2] = atan(dz / dx) + M_PI / 2;
 
 		//angles[i]   = angles[i]   * 180 / M_PI;
 		//angles[i+1] = angles[i+1] * 180 / M_PI;
@@ -3348,7 +3441,7 @@ int* angleHist(vector<Vertex*> contourPoints, int index){
 		angles[i+1] -= miny;
 		angles[i+2] -= minz;
 	}
-
+	
 	maxx -= minx;
 	maxy -= miny;
 	maxz -= minz;
@@ -3359,12 +3452,12 @@ int* angleHist(vector<Vertex*> contourPoints, int index){
 		angles[3 * i + 1] /= maxy;
 		angles[3 * i + 2] /= maxz;
 	}
-
+	
 	
 
 	for (int i = 0; i < 3*n; i++){
 		//cout << angles[i] << endl;
-		int ind = angles[i] / 0.05 ;
+		int ind = angles[i] / (M_PI/20);
 		if (ind < 0)
 			ind = 0;
 		if (ind>19)
@@ -3378,9 +3471,73 @@ int* angleHist(vector<Vertex*> contourPoints, int index){
 	return hist;
 }
 
-vector<int**> extractContourFeatures(Mesh *face, vector<vector<int>> faceParts){
 
-	vector<int**> partHists;
+
+float*eigenFeatures(vector<Vertex*> contourPoints)
+{
+	int n = contourPoints.size();
+
+	MatrixXf m(n, 3);
+
+	Vertex avg(0, 0, 0);
+
+	for (int i = 0; i < n; i++)
+	{
+		avg.coords[0] += contourPoints[i]->coords[0];
+		avg.coords[1] += contourPoints[i]->coords[1];
+		avg.coords[2] += contourPoints[i]->coords[2];
+	}
+
+	avg.coords[0] /= n;
+	avg.coords[1] /= n;
+	avg.coords[2] /= n;
+
+	for (int i = 0; i < n; i++)
+	{
+		m(i, 0) = contourPoints[i]->coords[0] - avg.coords[0];
+		m(i, 1) = contourPoints[i]->coords[1] - avg.coords[1];
+		m(i, 2) = contourPoints[i]->coords[2] - avg.coords[2];
+	}
+
+	MatrixXf Cov = m.transpose() * m;
+	Cov = Cov * (1.0f / n);
+//	std::cout << Cov << std::endl;
+
+	EigenSolver<MatrixXf> eigensolver(Cov);
+
+	float e1 = eigensolver.eigenvalues().col(0)[0].real();
+	float e2 = eigensolver.eigenvalues().col(0)[1].real();
+	float e3 = eigensolver.eigenvalues().col(0)[2].real();
+
+	
+
+	float L = (e1 - e2) / e1;
+	float P = (e2 - e3) / e1;
+	float S = e3 / e1;
+	float O = cbrt(e1*e2*e3);
+	float A = (e1 - e3) / e1;
+	float E = -(e1*log(e1) + e2*log(e2) + e3*log(e3));
+	float Sigma = e1 + e2 + e3;
+	float C = e3 / (e1 + e2 + e3);
+
+
+	float* features = new float[8];
+	features[0] = L;
+	features[1] = P;
+	features[2] = S;
+	features[3] = O;
+	features[4] = A;
+	features[5] = E;
+	features[6] = Sigma;
+	features[7] = C;
+
+	return features;
+}
+
+
+vector<float**> extractContourFeatures(Mesh *face, vector<vector<int>> faceParts){
+
+	vector<float**> partHists;
 
 	for (int i = 0; i < faceParts.size(); i++){
 
@@ -3418,12 +3575,12 @@ vector<int**> extractContourFeatures(Mesh *face, vector<vector<int>> faceParts){
 		f2.close();
 		/****************************************************************************/
 
-		int** hists = new int*[NUM_CONTOUR_POINTS];
+		float** hists = new float*[NUM_CONTOUR_POINTS + 1];
 
 		for (int j = 0; j < NUM_CONTOUR_POINTS; j++){
-			int* hist = new int[80];
-			int* hist1 = distHist(newPoints, j);
-			int* hist2 = angleHist(newPoints, j);
+			float* hist = new float[80];
+			float* hist1 = distHist(newPoints, j);
+			float* hist2 = angleHist(newPoints, j);
 
 
 			for (int h = 0; h < 20; h++)
@@ -3436,6 +3593,7 @@ vector<int**> extractContourFeatures(Mesh *face, vector<vector<int>> faceParts){
 			hists[j] = hist;
 		}
 
+		hists[NUM_CONTOUR_POINTS] = eigenFeatures(contourPoints);
 		/*
 		for (int j = 0; j < NUM_CONTOUR_POINTS; j++){
 
@@ -3460,7 +3618,7 @@ vector<int**> extractContourFeatures(Mesh *face, vector<vector<int>> faceParts){
 	return partHists;
 }
 
-float distContourFeatures(int* f1, int* f2){
+float distContourFeatures(float* f1, float* f2){
 
 	float cost = 0;
 
@@ -3472,9 +3630,9 @@ float distContourFeatures(int* f1, int* f2){
 	return cost;
 }
 
-float findClosestPointCost(int* pHist , int** hists){
+float findClosestPointCost(float* pHist, float** hists){
 
-	float bestCost=999999999999;
+	float bestCost=999999999999999;
 	float besti=-1;
 	for (int i = 0; i < NUM_CONTOUR_POINTS; i++){
 
@@ -3491,7 +3649,7 @@ float findClosestPointCost(int* pHist , int** hists){
 	return bestCost;
 }
 
-float matchContour(int** hist1, int** hist2){
+float matchContour(float** hist1, float** hist2){
 
 	float cost = 0;
 	for (int i = 0; i < NUM_CONTOUR_POINTS; i++){
@@ -3501,11 +3659,23 @@ float matchContour(int** hist1, int** hist2){
 
 	cost /= NUM_CONTOUR_POINTS;
 
-	return cost;
+
+	float* f1 = hist1[NUM_CONTOUR_POINTS];
+	float* f2 = hist2[NUM_CONTOUR_POINTS];
+	float cost2 = 0;
+	for (int k = 0; k < 8; k++)
+		cost2 += (f1[k] - f2[k]) * (f1[k] - f2[k]);
+
+	cost2 = sqrt(cost2);
+	cost2 /= 8*1000000;
+
+
+
+	return cost + cost2 ;
 
 }
 
-float matchFaceParts(vector<int**> f1, vector<int**> f2){
+float matchFaceParts(vector<float**> f1, vector<float**> f2){
 
 	float cost = 0;
 	for (int i = 0; i < f1.size(); i++)
@@ -4294,12 +4464,12 @@ int main()
 	faceNo = 3;
 	name = "initial";
 	initialFace = new Mesh();
-	/*
+	
 	if (!pointCloudMode)
-		initialFace->loadOff("faces\\testface3.off");
+		initialFace->loadOff(facesDirectory+"\\body1.off");
 	else 
-		initialFace->loadxyz("faces\\face1.xyz");
-	*/
+		initialFace->loadxyz(facesDirectory+"\\body1.xyz");
+	
 	//initialFace->scale(0.001);
 	// s = initialFace->calculateScale();
 	 cube = initialFace->getVTKPolyData(!pointCloudMode);
@@ -4358,7 +4528,7 @@ int main()
 
   /////////////////////////////////////////////////////////////////////////////////////////
  /* Mesh* mesh = new Mesh();
-  mesh->loadOff("faces\\fine2.off");
+  mesh->loadOff(facesDirectory+"\\fine2.off");
   float d1 = mesh->calculateScale();
   mesh->shiftMesh(200, 0);
   vtkPolyData *cube2 = mesh->getVTKPolyData();
@@ -4405,7 +4575,7 @@ int main()
   ////////////////////////////////////////////////////////////////////////////////////////////
   
   Mesh* mesh2 = new Mesh();
-  mesh2->loadOff("faces\\deformed2.off");
+  mesh2->loadOff(facesDirectory+"\\deformed2.off");
   mesh2->shiftMesh(400, 0);
   vtkPolyData *cube3 = mesh2->getVTKPolyData();
   nVerts = cube3->GetPoints()->GetNumberOfPoints();

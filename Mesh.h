@@ -32,15 +32,15 @@ struct Triangle
 	float dihedral;
 	std::vector<Triangle *> neighborhood;
 	Triangle(int i, int a, int b, int c) : idx(i), v1i(a), v2i(b), v3i(c) {};
-	
-	
+
+
 };
 
 struct Vertex
 {
-	int idx=-1; //verts[idx]
+	int idx = -1; //verts[idx]
 	float* coords, //coords[0] ~ x coord, ..
-		 * normal; //direction
+		*normal; //direction
 	float diff;
 	vector< int > triList;
 	vector< int > edgeList;
@@ -134,10 +134,12 @@ public:
 
 	}
 
-	void loadOff(char* fName);
-	
-	void loadxyz(char* fName);
-	
+	void loadOff2(const char* fName);
+	void loadOff(std::string filename);
+
+	void loadxyz2(const char* fName);
+	void loadxyz(std::string filename);
+
 	void createCube(float sl);
 	void assignNormalsToTriangles();
 	void findNeighborhoodTriangles();
@@ -146,14 +148,14 @@ public:
 	void addExtraEdgesToTheMesh(float threshold);
 	void deform2(Mesh* target, float weigth);
 	void deform(Mesh* target, float weight);
-	void deform(Mesh* target, float weigth,vector<int> corrVector);
-	void write(char* filename, bool isMesh=true);
+	void deform(Mesh* target, float weigth, vector<int> corrVector);
+	void write(char* filename, bool isMesh = true);
 	void initialize();
-	void deform(Mesh* target, float weigth,int iterations);
+	void deform(Mesh* target, float weigth, int iterations);
 	void deform(Mesh* target, float weigth, int iterations, vector<int> corrVector);
 	int addVertex(float* c);
-	vtkPolyData* getVTKPolyData(bool isMesh=true);
-	vtkPolyData* getVTKPolyDataSubsetByVertices(vector<int> vertices,int color=110);
+	vtkPolyData* getVTKPolyData(bool isMesh = true);
+	vtkPolyData* getVTKPolyDataSubsetByVertices(vector<int> vertices, int color = 110);
 	Mesh* getSubsetByVertices(vector<int> vertices);
 	void calculateDihedrals();
 	void shiftMesh(float x, float y){
@@ -176,13 +178,13 @@ public:
 	void addTriangle(int v1i, int v2i, int v3i);
 	vector<graph::Vertex*> createVectorGraph();
 	void removeEdge(int id);
-	
+	std::map<std::pair<int, int>, int> edgeMap;
 
-	
+
 private:
-	
-	
-	void addEdge(int v1i, int v2i,int tid=-1);
-	bool makeVertsNeighbors(int v, int w,int tid=-1);
-	
+
+
+	void addEdge(int v1i, int v2i, int tid = -1);
+	bool makeVertsNeighbors(int v, int w, int tid = -1);
+
 };
